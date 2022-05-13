@@ -1,5 +1,6 @@
 # Requirements
 - [python](https://www.python.org/downloads/) greater than v3.7 and less than v3.9.x
+- [PySimpleGUI](https://pysimplegui.readthedocs.io/en/latest/): `pip install pysimplegui`
 - [brownie](https://github.com/eth-brownie/brownie): `pip install eth-brownie`
 - brownie depends on [ganache](https://github.com/trufflesuite/ganache), install it with [Node.js](https://nodejs.org/en/): `npm install ganache --global`
 
