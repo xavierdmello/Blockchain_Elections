@@ -1,5 +1,7 @@
 # Requirements
+- [python](https://www.python.org/downloads/) greater than v3.7 and less than v3.9.x
 - [brownie](https://github.com/eth-brownie/brownie): `pip install brownie`
+- Brownie depends on [ganache](https://github.com/trufflesuite/ganache), install it with [Node.js](https://nodejs.org/en/): `npm install ganache --global`
 
 # Setup
 Create a .env file in the root folder with your `PRIVATE_KEY` and `WEB3_INFURA_PROJECT_ID` (if you are connecting to a test network). Your .env file should look similar to this:
