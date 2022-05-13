@@ -1,5 +1,5 @@
 # Requirements
-- [brownie](https://github.com/eth-brownie/brownie)
+- [brownie](https://github.com/eth-brownie/brownie): `pip install brownie`
 
 # Setup
 Create a .env file in the root folder with your `PRIVATE_KEY` and `WEB3_INFURA_PROJECT_ID` (if you are connecting to a test network). Your .env file should look similar to this:
