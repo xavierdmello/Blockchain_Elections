@@ -1,7 +1,15 @@
-from brownie import accounts, config, Election, ElectionManager, network
+from tkinter import NE
+from brownie import accounts, config, network, project
 from time import time
-import PySimpleGUI as sg
 
+# Set the blockchain network here:
+NETWORK = "development"
+
+# Load brownie project
+p = project.load(name="ElectionsCanada")
+p.load_config()
+from brownie.project.ElectionsCanada import *
+network.connect(NETWORK)
 
 def get_account():
     if network.show_active() == "development":
@@ -13,12 +21,7 @@ def get_account():
 def deploy():
     account = get_account()
     my_address = account.address
-    sg.Window(title="Elections Canada", layout=[[]], margins=(100, 50)).read()
 
     return Election.deploy(
         my_address, "TestElection", time() + 9999, {"from": get_account()}
     )
-
-
-def main():
-    deploy()

@@ -1,6 +1,6 @@
 import pytest
 from brownie import Election, Wei, accounts
-from scripts.deploy import get_account
+from scripts.blockchain_commands import get_account
 from time import time, sleep
 
 
