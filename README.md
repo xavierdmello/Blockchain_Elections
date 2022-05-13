@@ -1,6 +1,6 @@
 # Requirements
 - [python](https://www.python.org/downloads/) greater than v3.7 and less than v3.9.x
-- [brownie](https://github.com/eth-brownie/brownie): `pip install brownie`
+- [brownie](https://github.com/eth-brownie/brownie): `pip install eth-brownie`
 - Brownie depends on [ganache](https://github.com/trufflesuite/ganache), install it with [Node.js](https://nodejs.org/en/): `npm install ganache --global`
 
 # Setup
