@@ -27,6 +27,8 @@ MANAGER_CONTRACT = Contract.from_abi(
     "0x4f65f5bDcd4cbf861730f1A5127365FAc6121eEF",
     ElectionManager.abi,
 )
+
+# Load accounts
 for private_key in get_parsed_private_keys():
     accounts.add(private_key)
 active_account = get_account(0)

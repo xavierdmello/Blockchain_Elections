@@ -7,7 +7,8 @@ from blockchain_commands import (
 )
 from brownie import accounts
 
-
+# Open in new window
+# TODO: finish
 def create_election():
     create_election_col = [
         [
@@ -43,7 +44,6 @@ sg.LOOK_AND_FEEL_TABLE["ElectionsCanadaTheme"] = {
     "DESCRIPTION": ["Red", "Blue", "Grey", "Vintage", "Wedding"],
 }
 sg.theme("ElectionsCanadaTheme")
-
 
 voting_col = [
     [sg.Column([[sg.Image(source="images/logo.png")]], justification="c")],
@@ -100,10 +100,8 @@ layout = [
     ],
 ]
 
-
 # Create the window
 window = sg.Window("Elections Canada", layout, icon="images/icon.ico", finalize=True)
-
 
 # Create an event loop
 while True:
