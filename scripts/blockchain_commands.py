@@ -3,7 +3,7 @@ from brownie import Contract, accounts, config, network, project
 from time import time
 
 
-def get_parsed_account_list():
+def get_parsed_private_keys():
     return config["wallets"]["from_key"].split(",")
 
 
@@ -11,7 +11,7 @@ def get_account(index):
     if network.show_active() == "development":
         return accounts[index]
     else:
-        return accounts.add(get_parsed_account_list()[index])
+        return accounts.load(index)
 
 
 # Load brownie project
@@ -27,6 +27,8 @@ MANAGER_CONTRACT = Contract.from_abi(
     "0x4f65f5bDcd4cbf861730f1A5127365FAc6121eEF",
     ElectionManager.abi,
 )
+for private_key in get_parsed_private_keys():
+    accounts.add(private_key)
 active_account = get_account(0)
 
 
