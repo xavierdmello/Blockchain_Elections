@@ -1,3 +1,4 @@
 dotenv: .env
+contract: ${CONTRACT}
 wallets:
   from_key: ${PRIVATE_KEY}

@@ -5,7 +5,7 @@ from time import time, sleep
 
 
 def test_get_candidate_name():
-    account = get_account()
+    account = get_account(0)
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}
@@ -19,7 +19,7 @@ def test_get_candidate_name():
 
 @pytest.mark.xfail
 def test_time_close():
-    account = get_account()
+    account = get_account(0)
     address = account.address
     election = Election.deploy(address, "TestElection", time() + 2, {"from": account})
 
@@ -33,7 +33,7 @@ def test_time_close():
 
 @pytest.mark.xfail
 def test_close():
-    account = get_account()
+    account = get_account(0)
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}
@@ -48,7 +48,7 @@ def test_close():
 
 
 def test_vote():
-    account = get_account()
+    account = get_account(0)
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}
@@ -63,7 +63,7 @@ def test_vote():
 
 
 def test_run_for_election():
-    account = get_account()
+    account = get_account(0)
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}

@@ -1,27 +1,49 @@
 from tkinter import NE
-from brownie import accounts, config, network, project
+from brownie import Contract, accounts, config, network, project
 from time import time
 
-# Set the blockchain network here:
-NETWORK = "development"
+
+def get_parsed_account_list():
+    return config["wallets"]["from_key"].split(",")
+
+
+def get_account(index):
+    if network.show_active() == "development":
+        return accounts[index]
+    else:
+        return accounts.add(get_parsed_account_list()[index])
+
 
 # Load brownie project
 p = project.load(name="ElectionsCanada")
 p.load_config()
 from brownie.project.ElectionsCanada import *
-network.connect(NETWORK)
 
-def get_account():
-    if network.show_active() == "development":
-        return accounts[0]
-    else:
-        return accounts.add(config["wallets"]["from_key"])
+# Election Manager Contract & Network
+NETWORK = "rinkeby"
+network.main.connect(NETWORK)
+MANAGER_CONTRACT = Contract.from_abi(
+    "ElectionManager",
+    "0x4f65f5bDcd4cbf861730f1A5127365FAc6121eEF",
+    ElectionManager.abi,
+)
+active_account = get_account(0)
 
 
-def deploy():
-    account = get_account()
-    my_address = account.address
-
-    return Election.deploy(
-        my_address, "TestElection", time() + 9999, {"from": get_account()}
+def get_election_list():
+    return dict(
+        zip(
+            MANAGER_CONTRACT.getElections(),
+            MANAGER_CONTRACT.getElectionNames(),
+        )
     )
+
+
+def create_election(election_name, election_end_time):
+    return MANAGER_CONTRACT.createElection(
+        election_name, election_end_time, {"from": active_account}
+    )
+
+
+def deploy_manager():
+    return ElectionManager.deploy({"from": active_account})

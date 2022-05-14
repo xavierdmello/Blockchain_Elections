@@ -26,4 +26,8 @@ contract ElectionManager {
         }
         return electionNames;
     }
+
+    function getElections() public view returns (Election[] memory) {
+        return elections;
+    }
 }
