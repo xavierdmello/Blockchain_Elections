@@ -12,6 +12,4 @@ Create a .env file in the root folder with your `PRIVATE_KEY` and `WEB3_INFURA_P
   ```
     
 # Usage
-Run file with `brownie run`
-
-For example: `brownie run scripts/deploy.py`
+Run deploy.py
