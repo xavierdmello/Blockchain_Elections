@@ -1,28 +1,49 @@
 import PySimpleGUI as sg
-from blockchain_commands import (
-    get_election_list,
-)
+from hypothesis import target
+from blockchain_commands import get_election_list, create_election
 from brownie import accounts
+from datetime import datetime as dt
 
 # Open in new window
-# TODO: finish
-def create_election():
-    create_election_col = [
+def create_election_window():
+    layout = (
         [
-            sg.Text("Create an election:"),
-            sg.Push(),
-            sg.Button("Back", key="back_create_election"),
+            [
+                sg.Text("Create an election:"),
+                sg.Push(),
+                sg.Button("Back", key="back"),
+            ],
+            [sg.Text("Election Name:"), sg.In(key="election_name")],
+            [
+                sg.Text("Election End Date:"),
+                sg.CalendarButton(
+                    "Choose Date", target="in_date", format="%m/%d/%Y 23:59:59"
+                ),
+                sg.Text("", key="date_display_text"),
+                sg.In(key="in_date", disabled=True, visible=False, enable_events=True),
+            ],
+            [sg.Button("Create Election", key="create_election_btn")],
         ],
-        [sg.Text("Election Name:"), sg.In(key="election_name")],
-        [
-            sg.Text("Election End Date:"),
-            sg.CalendarButton(
-                "Choose Date",
-                target=None,
-                key="date",
-            ),
-        ],
-    ]
+    )
+    window = sg.Window("Create Election", layout, icon="images/icon.ico", finalize=True)
+
+    while True:
+        event, values = window.read()
+        if event == "back" or event == sg.WIN_CLOSED:
+            break
+        if event == "create_election_btn":
+            create_election(values["election_name"], unix_time(values["in_date"]))
+            break
+        if event == "in_date":
+            # Display selected date as election end time
+            # Truncates time (end of the day) as it is not intended to be shown to the user
+            window["date_display_text"].update(values["in_date"].split(" ")[0])
+    window.close()
+
+
+# Convert MM/DD/YYYY H:M:S Date to local Unix timestamp
+def unix_time(MMDDYYYY):
+    return int(dt.timestamp(dt.strptime(MMDDYYYY, "%m/%d/%Y %H:%M:%S")))
 
 
 # Create theme
@@ -107,7 +128,7 @@ while True:
     if event == sg.WIN_CLOSED:
         break
     if event == "create_election":
-        pass
+        create_election_window()
     if event == "add_account":
         pass
     if event == "refresh_elections":

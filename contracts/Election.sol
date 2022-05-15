@@ -12,6 +12,7 @@ contract Election {
     address public owner;
     bool public forceClosed = false;
     uint256 public electionEndTime;
+    uint256 public electionStartTime;
 
     constructor(
         address _owner,
@@ -21,6 +22,7 @@ contract Election {
         owner = _owner;
         electionName = _electionName;
         electionEndTime = _electionEndTime;
+        electionStartTime = block.timestamp;
     }
 
     function runForElection(string memory _candidateName)

@@ -1,17 +1,9 @@
 from tkinter import NE
 from brownie import Contract, accounts, config, network, project
-from time import time
 
 
 def get_parsed_private_keys():
     return config["wallets"]["from_key"].split(",")
-
-
-def get_account(index):
-    if network.show_active() == "development":
-        return accounts[index]
-    else:
-        return accounts.load(index)
 
 
 # Load brownie project
@@ -31,7 +23,7 @@ MANAGER_CONTRACT = Contract.from_abi(
 # Load accounts
 for private_key in get_parsed_private_keys():
     accounts.add(private_key)
-active_account = get_account(0)
+active_account = accounts[0]
 
 
 def get_election_list():
