@@ -1,7 +1,4 @@
-from cgitb import text
-from tkinter import CENTER
 import PySimpleGUI as sg
-from numpy import size
 from blockchain_commands import (
     get_election_list,
 )
