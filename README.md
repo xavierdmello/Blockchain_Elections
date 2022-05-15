@@ -12,5 +12,6 @@ Create a .env file in the root folder with your `PRIVATE_KEY` and `WEB3_INFURA_P
   ```
     
 # Usage
-Run scripts/UI.py.
-Standalone packaged .exe will be coming soon.
+Run `scripts/UI.py`.
+
+Standalone packaged `.exe` will be coming soon.
