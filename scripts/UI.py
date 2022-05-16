@@ -1,12 +1,5 @@
 import PySimpleGUI as sg
-from blockchain_commands import (
-    get_elections,
-    create_election,
-    active_account,
-    MANAGER_CONTRACT,
-    build_ballot,
-    active_election,
-)
+from blockchain_commands import *
 from brownie import accounts
 from datetime import datetime as dt
 from dotenv import dotenv_values
@@ -90,6 +83,10 @@ def refresh_account_list(window: sg.Window):
     window["account_list"].update(accounts)
 
 
+def refresh_ballot(window: sg.Window, election):
+    window["election_table"].update(build_ballot(election))
+
+
 # TODO: Fix error if environment variable does not already exist. Create variable, maybe?
 def append_dotenv(env: str, to_append: str):
     envs = dotenv_values()
@@ -124,7 +121,7 @@ voting_col = [
     [
         sg.T("Logged in as:"),
         sg.Combo(
-            accounts._accounts,
+            accounts,
             key="account_list",
             default_value=accounts._accounts[0],
             enable_events=True,
@@ -145,9 +142,8 @@ voting_col = [
     [
         sg.T("My vote:"),
         sg.Combo(
-            [],
+            get_candidates(active_election),
             key="candidate_list",
-            # default_value=accounts._accounts[0],
             enable_events=True,
         ),
         sg.Button("Vote", key="vote_button"),
@@ -174,32 +170,11 @@ elections_col = [
     ],
 ]
 
-accounts_col = [
-    [
-        sg.Text("Choose an account:"),
-        sg.Push(),
-        sg.Button("Add Account", key="add_account"),
-    ],
-    [
-        sg.Listbox(
-            values=accounts,
-            size=(40, 20),
-            enable_events=True,
-            key="account_list",
-            background_color="#e3e5e8",
-            text_color="#000000",
-            highlight_background_color="#860038",
-        )
-    ],
-]
-
 layout = [
     [
         sg.Column(voting_col, justification="c"),
         sg.VSeparator(),
         sg.Column(elections_col, key="elections_col"),
-        sg.VSeparator(),
-        sg.Column(accounts_col, key="accounts_col"),
     ],
 ]
 
@@ -226,7 +201,11 @@ while True:
         active_account = values["account_list"]
     if event == "election_list":
         active_election = values["election_list"][0]
-        window["election_table"].update(build_ballot(active_election))
+        window["candidate_list"].update(value=get_candidates(active_election))
+        refresh_ballot(window, active_election)
+    if event == "vote_button":
+        vote(active_election, values["candidate_list"])
+        refresh_ballot(window, active_election)
 
 
 window.close()

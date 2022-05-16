@@ -1,5 +1,3 @@
-import re
-from webbrowser import get
 from brownie import Contract, accounts, config, network, project
 
 
@@ -38,6 +36,10 @@ def get_candidate_name(election, candidate_address: str) -> str:
 
 def get_num_votes(election, candidate_address: str) -> int:
     return election.getNumVotes(candidate_address)
+
+
+def vote(election, candidate_address):
+    election.vote(candidate_address, {"from": active_account})
 
 
 def build_ballot(election):
