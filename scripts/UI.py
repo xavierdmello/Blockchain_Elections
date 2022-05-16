@@ -1,10 +1,17 @@
 import PySimpleGUI as sg
-from hypothesis import target
-from blockchain_commands import get_election_list, create_election
+from blockchain_commands import (
+    get_elections,
+    create_election,
+    active_account,
+    MANAGER_CONTRACT,
+    build_ballot,
+    active_election,
+)
 from brownie import accounts
 from datetime import datetime as dt
+from dotenv import dotenv_values
 
-# Open in new window
+# Opens new window for creating election
 def create_election_window():
     layout = (
         [
@@ -32,7 +39,9 @@ def create_election_window():
         if event == "back" or event == sg.WIN_CLOSED:
             break
         if event == "create_election_btn":
-            create_election(values["election_name"], unix_time(values["in_date"]))
+            create_election(
+                MANAGER_CONTRACT, values["election_name"], unix_time(values["in_date"])
+            )
             break
         if event == "in_date":
             # Display selected date as election end time
@@ -41,9 +50,54 @@ def create_election_window():
     window.close()
 
 
+# Opens new window for adding account to the brownie accounts list
+def add_account_window():
+    layout = (
+        [
+            [
+                sg.Text("Add an account:"),
+                sg.Push(),
+                sg.Button("Back", key="back"),
+            ],
+            [sg.Text("Private Key:"), sg.In(key="private_key")],
+            [sg.Button("Add Account", key="add_account_btn")],
+        ],
+    )
+    window = sg.Window("Add Account", layout, icon="images/icon.ico", finalize=True)
+
+    while True:
+        event, values = window.read()
+        if event == "back" or event == sg.WIN_CLOSED:
+            break
+        if event == "add_account_btn":
+            accounts.add(values["private_key"])
+            # append private key to PRIVATE_KEY variable in .env file
+            append_dotenv("PRIVATE_KEY", values["private_key"])
+            break
+    window.close()
+
+
 # Convert MM/DD/YYYY H:M:S Date to local Unix timestamp
 def unix_time(MMDDYYYY):
     return int(dt.timestamp(dt.strptime(MMDDYYYY, "%m/%d/%Y %H:%M:%S")))
+
+
+def refresh_election_list(manager_contract, window: sg.Window):
+    window["election_list"].update(get_elections(MANAGER_CONTRACT))
+
+
+def refresh_account_list(window: sg.Window):
+    window["account_list"].update(accounts)
+
+
+# TODO: Fix error if environment variable does not already exist. Create variable, maybe?
+def append_dotenv(env: str, to_append: str):
+    envs = dotenv_values()
+    envs[env] = envs[env] + "," + to_append
+    with open(".env", "a") as file:
+        file.truncate(0)
+        for key in envs:
+            file.write(f"{key}={envs[key]}\n")
 
 
 # Create theme
@@ -66,7 +120,38 @@ sg.theme("ElectionsCanadaTheme")
 voting_col = [
     [sg.Column([[sg.Image(source="images/logo.png")]], justification="c")],
     [sg.HorizontalSeparator()],
-    [sg.T(size=(40, 15))],
+    # TODO: Intergrate admin console
+    [
+        sg.T("Logged in as:"),
+        sg.Combo(
+            accounts._accounts,
+            key="account_list",
+            default_value=accounts._accounts[0],
+            enable_events=True,
+        ),
+        sg.Button("Admin Console", key="admin", button_color="#52accc", visible=False),
+        sg.Button("Add Account", key="add_account"),
+    ],
+    [sg.HorizontalSeparator()],
+    [sg.Text("", key="election_title")],
+    [
+        sg.Table(
+            build_ballot(active_election),
+            headings=["Candidate", "Votes", "Address"],
+            key="election_table",
+        )
+    ],
+    [sg.HorizontalSeparator()],
+    [
+        sg.T("My vote:"),
+        sg.Combo(
+            [],
+            key="candidate_list",
+            # default_value=accounts._accounts[0],
+            enable_events=True,
+        ),
+        sg.Button("Vote", key="vote_button"),
+    ],
 ]
 
 elections_col = [
@@ -78,7 +163,7 @@ elections_col = [
     ],
     [
         sg.Listbox(
-            values=get_election_list().values(),
+            values=get_elections(MANAGER_CONTRACT),
             size=(40, 20),
             enable_events=True,
             key="election_list",
@@ -110,7 +195,7 @@ accounts_col = [
 
 layout = [
     [
-        sg.Column(voting_col),
+        sg.Column(voting_col, justification="c"),
         sg.VSeparator(),
         sg.Column(elections_col, key="elections_col"),
         sg.VSeparator(),
@@ -121,6 +206,7 @@ layout = [
 # Create the window
 window = sg.Window("Elections Canada", layout, icon="images/icon.ico", finalize=True)
 
+
 # Create an event loop
 while True:
     event, values = window.read()
@@ -129,9 +215,18 @@ while True:
         break
     if event == "create_election":
         create_election_window()
+        refresh_election_list(MANAGER_CONTRACT, window)
     if event == "add_account":
-        pass
+        add_account_window()
+        refresh_account_list(window)
+        # TODO: Show sentinel when account is added.
     if event == "refresh_elections":
-        window["election_list"].update(get_election_list().values())
+        refresh_election_list(MANAGER_CONTRACT, window)
+    if event == "account_list":
+        active_account = values["account_list"]
+    if event == "election_list":
+        active_election = values["election_list"][0]
+        window["election_table"].update(build_ballot(active_election))
+
 
 window.close()
