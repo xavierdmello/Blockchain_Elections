@@ -199,7 +199,7 @@ while True:
         refresh_election_list(MANAGER_CONTRACT, window)
     if event == "account_list":
         active_account = values["account_list"]
-    if event == "election_list":
+    if event == "election_list" and values["election_list"] != []:
         active_election = values["election_list"][0]
         window["candidate_list"].update(value=get_candidates(active_election))
         refresh_ballot(window, active_election)
