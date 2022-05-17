@@ -1,9 +1,12 @@
 import PySimpleGUI as sg
-from numpy import true_divide
 from blockchain_commands import *
 from brownie import accounts
 from datetime import datetime as dt
 from dotenv import dotenv_values
+
+# TODO: Implement help menus (ex: question marks that let you hover and click on then, could be used in "add account" section)
+# TODO: Error handling
+# TODO: fix bug: after election list refresh, elections will get deslected
 
 
 def build_ballot(candidates):
@@ -20,7 +23,7 @@ def build_ballot(candidates):
 
 
 # Opens new window for creating election
-def create_election_window(from_account):
+def create_election_window(manager_contract, from_account):
     layout = (
         [
             [
@@ -48,7 +51,7 @@ def create_election_window(from_account):
             break
         if event == "create_election_btn":
             create_election(
-                MANAGER_CONTRACT,
+                manager_contract,
                 values["election_name"],
                 unix_time(values["in_date"]),
                 from_account,
@@ -58,6 +61,42 @@ def create_election_window(from_account):
             # Display selected date as election end time
             # Truncates time (end of the day) as it is not intended to be shown to the user
             window["date_display_text"].update(values["in_date"].split(" ")[0])
+    window.close()
+
+
+def run_for_office_window(wrapped_election: WrappedElection, from_account):
+    layout = (
+        [
+            [
+                sg.Text("Run for office:"),
+                sg.Push(),
+                sg.Button("Back", key="back"),
+            ],
+            [sg.Text("Candidate Name:"), sg.In(key="candidate_name")],
+            [
+                sg.Text(
+                    "Fee: "
+                    + str(wrapped_election.contract.candidateFee() / 10**18)
+                    + " ETH"
+                )
+            ],
+            [
+                sg.Text(
+                    "Your Balance: " + str(from_account.balance() / 10**18) + " ETH"
+                )
+            ],
+            [sg.Button("Run For Office", key="confirm_run_for_office")],
+        ],
+    )
+    window = sg.Window("Run For Office", layout, icon="images/icon.ico")
+
+    while True:
+        event, values = window.read()
+        if event == "back" or event == sg.WIN_CLOSED:
+            break
+        if event == "confirm_run_for_office":
+            run_for_office(wrapped_election, values["candidate_name"], from_account)
+            break
     window.close()
 
 
@@ -116,6 +155,8 @@ def append_dotenv(env: str, to_append: str):
             file.write(f"{key}={envs[key]}\n")
 
 
+# Get initial data from blockchain
+elections = get_elections(MANAGER_CONTRACT)
 # Create theme
 sg.LOOK_AND_FEEL_TABLE["ElectionsCanadaTheme"] = {
     "BACKGROUND": "#FFFFFF",
@@ -133,6 +174,8 @@ sg.LOOK_AND_FEEL_TABLE["ElectionsCanadaTheme"] = {
 }
 sg.theme("ElectionsCanadaTheme")
 
+# Candidates list of default selected election
+initial_candidates = get_candidates(active_election)
 voting_col = [
     [sg.Column([[sg.Image(source="images/logo.png")]], justification="c")],
     [sg.HorizontalSeparator()],
@@ -142,6 +185,9 @@ voting_col = [
         sg.Combo(
             accounts._accounts,
             key="account_list",
+            default_value=accounts._accounts[0]
+            if len(accounts._accounts) > 0
+            else None,
             enable_events=True,
         ),
         sg.Button("Admin Console", key="admin", button_color="#52accc", visible=False),
@@ -157,7 +203,7 @@ voting_col = [
             [
                 [
                     sg.Text(
-                        active_election.name,
+                        active_election.name if active_election is not None else "",
                         key="election_title",
                         font=(
                             sg.DEFAULT_FONT[0],
@@ -171,7 +217,7 @@ voting_col = [
         ),
         sg.Push(),
         sg.T(size=(5, 1)),
-        sg.Button("⟳", key="refresh_election"),
+        sg.Button("⟳", key="refresh_ballot"),
     ],
     [
         sg.Table(
@@ -180,7 +226,8 @@ voting_col = [
             key="ballot",
             expand_x=True,
             expand_y=True,
-            alternating_row_color=True,
+            # row_colors=("#ffffff", "#e3e5e8"),
+            # alternating_row_color=False,
             justification="c",
             display_row_numbers=True,
         )
@@ -189,8 +236,11 @@ voting_col = [
     [
         sg.T("My vote:"),
         sg.Combo(
-            get_candidates(active_election),
+            initial_candidates,
             key="candidate_list",
+            default_value=initial_candidates[0]
+            if len(initial_candidates) > 0
+            else None,
             enable_events=True,
         ),
         sg.Button("Vote", key="vote_button"),
@@ -206,7 +256,8 @@ elections_col = [
     ],
     [
         sg.Listbox(
-            values=get_elections(MANAGER_CONTRACT),
+            values=elections,
+            default_values=[elections[0]] if len(elections) > 0 else None,
             size=(40, 20),
             enable_events=True,
             key="election_list",
@@ -236,6 +287,7 @@ account_list: sg.Combo = window["account_list"]
 election_list: sg.Listbox = window["election_list"]
 candidate_list: sg.Combo = window["candidate_list"]
 ballot: sg.Table = window["ballot"]
+election_title: sg.Text = window["election_title"]
 
 # Create an event loop
 while True:
@@ -244,7 +296,7 @@ while True:
     if event == sg.WIN_CLOSED:
         break
     if event == "create_election":
-        create_election_window(values["account_list"])
+        create_election_window(MANAGER_CONTRACT, values["account_list"])
         refresh_election_list(election_list, MANAGER_CONTRACT)
     if event == "add_account":
         add_account_window()
@@ -255,12 +307,24 @@ while True:
     if event == "election_list" and values["election_list"] != []:
         active_election = values["election_list"][0]
         candidates = get_candidates(active_election)
-        candidate_list.update(value=candidates)
+        candidate_list.update(
+            values=candidates, value=candidates[0] if len(candidates) > 0 else None
+        )
+        election_title.update(value=active_election.name)
         refresh_ballot(ballot, candidates)
     if event == "vote_button":
         vote(active_election, values["candidate_list"].address, values["account_list"])
         candidates = get_candidates(active_election)
         refresh_ballot(ballot, candidates)
+    if event == "run_for_office":
+        run_for_office_window(values["election_list"][0], values["account_list"])
+        candidates = get_candidates(values["election_list"][0])
+        refresh_ballot(ballot, candidates)
+        candidate_list.update(
+            values=candidates, value=candidates[0] if len(candidates) > 0 else None
+        )
+    if event == "refresh_ballot":
+        refresh_ballot(ballot, get_candidates(values["election_list"][0]))
 
 
 window.close()

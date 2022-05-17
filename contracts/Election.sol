@@ -13,6 +13,8 @@ contract Election {
     bool public forceClosed = false;
     uint256 public electionEndTime;
     uint256 public electionStartTime;
+    // New candidate fee: 0.05 ETH
+    uint256 public candidateFee = 0.05 * 10**18;
 
     constructor(
         address _owner,
@@ -30,8 +32,6 @@ contract Election {
         payable
         onlyElectionRunning
     {
-        // New candidate fee: 0.05 ETH
-        uint256 candidateFee = 0.05 * 10**18;
         require(
             isCandidate[msg.sender] == false,
             "You are already a candidate!"

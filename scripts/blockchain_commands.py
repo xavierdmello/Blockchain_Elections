@@ -1,5 +1,6 @@
 from brownie import (
     Contract,
+    Wei,
     accounts,
     config,
     network,
@@ -50,16 +51,26 @@ def deploy_manager(from_account):
     return ElectionManager.deploy({"from": from_account})
 
 
-def get_candidate_name(election, candidate_address: str) -> str:
-    return election.candidateNames(candidate_address)
+def get_candidate_name(
+    wrapped_election: WrappedElection, candidate_address: str
+) -> str:
+    return wrapped_election.contract.candidateNames(candidate_address)
 
 
-def get_num_votes(election, candidate_address: str) -> int:
-    return election.getNumVotes(candidate_address)
+def get_num_votes(wrapped_election: WrappedElection, candidate_address: str) -> int:
+    return wrapped_election.contract.getNumVotes(candidate_address)
 
 
-def vote(election, candidate_address, from_account):
-    election.vote(candidate_address, {"from": from_account})
+def vote(wrapped_election: WrappedElection, candidate_address, from_account):
+    wrapped_election.contract.vote(candidate_address, {"from": from_account})
+
+
+def run_for_office(
+    wrapped_election: WrappedElection, candidate_name: str, from_account: str
+):
+    wrapped_election.contract.runForElection(
+        candidate_name, {"from": from_account, "value": Wei("0.05 ether")}
+    )
 
 
 def get_election_names(manager_contract):
@@ -76,8 +87,8 @@ def get_candidates(election):
         candidates.append(
             WrappedCandidate(
                 candidate_address,
-                get_candidate_name(candidate_address),
-                get_num_votes(candidate_address),
+                get_candidate_name(election, candidate_address),
+                get_num_votes(election, candidate_address),
             )
         )
     return candidates
@@ -94,7 +105,7 @@ NETWORK = "rinkeby"
 network.main.connect(NETWORK)
 MANAGER_CONTRACT = Contract.from_abi(
     "ElectionManager",
-    "0x8769D96Fd61226E536C751bE95dE65DF14D419bf",
+    "0x041d49D1915E35dFF8Bc048C4cA8EbF22224F9cf",
     ElectionManager.abi,
 )
 
@@ -107,3 +118,5 @@ if len(elections) == 0:
     active_election = None
 else:
     active_election = elections[0]
+
+# print(deploy_manager(accounts[-1]))
