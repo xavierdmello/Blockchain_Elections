@@ -215,7 +215,7 @@ voting_col = [
         ),
         sg.Push(),
         sg.T(
-            size=(6, 1)
+            size=(7, 1)
         ),  # Dummy spacer element to keep election title somewhat centered.
         sg.Button("⟳", key="refresh_ballot"),
     ],
