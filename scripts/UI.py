@@ -195,9 +195,7 @@ voting_col = [
     ],
     [sg.HorizontalSeparator()],
     [
-        sg.Button(
-            "Run For Office", key="run_for_office"
-        ),  # Dummy spacer element to keep election title somewhat centered. 4 VSCode tabs.
+        sg.Button("Run For Office", key="run_for_office"),
         sg.Push(),
         sg.Column(
             [
@@ -216,7 +214,9 @@ voting_col = [
             justification="c",
         ),
         sg.Push(),
-        sg.T(size=(5, 1)),
+        sg.T(
+            size=(4, 1)
+        ),  # Dummy spacer element to keep election title somewhat centered.
         sg.Button("⟳", key="refresh_ballot"),
     ],
     [
