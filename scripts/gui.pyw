@@ -1,5 +1,5 @@
 import PySimpleGUI as sg
-from blockchain_commands import *
+from blockchain import *
 from brownie import accounts
 from datetime import datetime as dt
 from dotenv import dotenv_values
