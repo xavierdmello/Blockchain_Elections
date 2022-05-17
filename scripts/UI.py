@@ -1,11 +1,26 @@
 import PySimpleGUI as sg
+from numpy import true_divide
 from blockchain_commands import *
 from brownie import accounts
 from datetime import datetime as dt
 from dotenv import dotenv_values
 
+
+def build_ballot(candidates):
+    ballot = []
+    for candidate in candidates:
+        ballot.append(
+            [
+                candidate.name,
+                candidate.votes,
+                candidate.address,
+            ]
+        )
+    return ballot
+
+
 # Opens new window for creating election
-def create_election_window():
+def create_election_window(from_account):
     layout = (
         [
             [
@@ -33,7 +48,10 @@ def create_election_window():
             break
         if event == "create_election_btn":
             create_election(
-                MANAGER_CONTRACT, values["election_name"], unix_time(values["in_date"])
+                MANAGER_CONTRACT,
+                values["election_name"],
+                unix_time(values["in_date"]),
+                from_account,
             )
             break
         if event == "in_date":
@@ -75,16 +93,17 @@ def unix_time(MMDDYYYY):
     return int(dt.timestamp(dt.strptime(MMDDYYYY, "%m/%d/%Y %H:%M:%S")))
 
 
-def refresh_election_list(manager_contract, window: sg.Window):
-    window["election_list"].update(get_elections(MANAGER_CONTRACT))
+def refresh_election_list(election_list: sg.Listbox, manager_contract):
+    election_list.update(get_elections(manager_contract))
 
 
-def refresh_account_list(window: sg.Window):
-    window["account_list"].update(accounts)
+def refresh_account_list(account_combo: sg.Combo, accounts):
+    # 'value=accounts[-1]' makes sure that the selected account in the box is the one the user just added
+    account_combo.update(values=accounts, value=accounts[-1])
 
 
-def refresh_ballot(window: sg.Window, election):
-    window["election_table"].update(build_ballot(election))
+def refresh_ballot(ballot: sg.Table, candidates):
+    ballot.update(build_ballot(candidates))
 
 
 # TODO: Fix error if environment variable does not already exist. Create variable, maybe?
@@ -121,21 +140,49 @@ voting_col = [
     [
         sg.T("Logged in as:"),
         sg.Combo(
-            accounts,
+            accounts._accounts,
             key="account_list",
-            default_value=accounts._accounts[0],
             enable_events=True,
         ),
         sg.Button("Admin Console", key="admin", button_color="#52accc", visible=False),
         sg.Button("Add Account", key="add_account"),
     ],
     [sg.HorizontalSeparator()],
-    [sg.Text("", key="election_title")],
+    [
+        sg.Button(
+            "Run For Office", key="run_for_office"
+        ),  # Dummy spacer element to keep election title somewhat centered. 4 VSCode tabs.
+        sg.Push(),
+        sg.Column(
+            [
+                [
+                    sg.Text(
+                        active_election.name,
+                        key="election_title",
+                        font=(
+                            sg.DEFAULT_FONT[0],
+                            11,
+                            "underline",
+                        ),
+                    )
+                ]
+            ],
+            justification="c",
+        ),
+        sg.Push(),
+        sg.T(size=(5, 1)),
+        sg.Button("⟳", key="refresh_election"),
+    ],
     [
         sg.Table(
-            build_ballot(active_election),
+            build_ballot(get_candidates(active_election)),
             headings=["Candidate", "Votes", "Address"],
-            key="election_table",
+            key="ballot",
+            expand_x=True,
+            expand_y=True,
+            alternating_row_color=True,
+            justification="c",
+            display_row_numbers=True,
         )
     ],
     [sg.HorizontalSeparator()],
@@ -181,6 +228,14 @@ layout = [
 # Create the window
 window = sg.Window("Elections Canada", layout, icon="images/icon.ico", finalize=True)
 
+# Setup objects
+# Due to the limitations of PySimpleGUI, these objects can not be used to read the value of their own contents.
+# To do that, you must use values["insert_object_key_here"]
+# Ex: To read the currently selected account you would call values["account_list"]
+account_list: sg.Combo = window["account_list"]
+election_list: sg.Listbox = window["election_list"]
+candidate_list: sg.Combo = window["candidate_list"]
+ballot: sg.Table = window["ballot"]
 
 # Create an event loop
 while True:
@@ -189,23 +244,23 @@ while True:
     if event == sg.WIN_CLOSED:
         break
     if event == "create_election":
-        create_election_window()
-        refresh_election_list(MANAGER_CONTRACT, window)
+        create_election_window(values["account_list"])
+        refresh_election_list(election_list, MANAGER_CONTRACT)
     if event == "add_account":
         add_account_window()
-        refresh_account_list(window)
+        refresh_account_list(account_list, accounts._accounts)
         # TODO: Show sentinel when account is added.
     if event == "refresh_elections":
-        refresh_election_list(MANAGER_CONTRACT, window)
-    if event == "account_list":
-        active_account = values["account_list"]
+        refresh_election_list(election_list, MANAGER_CONTRACT)
     if event == "election_list" and values["election_list"] != []:
         active_election = values["election_list"][0]
-        window["candidate_list"].update(value=get_candidates(active_election))
-        refresh_ballot(window, active_election)
+        candidates = get_candidates(active_election)
+        candidate_list.update(value=candidates)
+        refresh_ballot(ballot, candidates)
     if event == "vote_button":
-        vote(active_election, values["candidate_list"])
-        refresh_ballot(window, active_election)
+        vote(active_election, values["candidate_list"].address, values["account_list"])
+        candidates = get_candidates(active_election)
+        refresh_ballot(ballot, candidates)
 
 
 window.close()
