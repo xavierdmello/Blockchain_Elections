@@ -88,6 +88,7 @@ contract Election {
 
     function close() public onlyOwner {
         forceClosed = true;
+        electionEndTime = block.timestamp;
     }
 
     // Returns an array of the candidates with the highest number of votes.
