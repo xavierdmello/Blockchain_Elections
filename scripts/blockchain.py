@@ -101,22 +101,19 @@ p.load_config()
 from brownie.project.ElectionsCanada import *
 
 # Election Manager Contract & Network
-NETWORK = "rinkeby"
+NETWORK = "ftm-test"
 network.main.connect(NETWORK)
-MANAGER_CONTRACT = Contract.from_abi(
-    "ElectionManager",
-    "0x041d49D1915E35dFF8Bc048C4cA8EbF22224F9cf",
-    ElectionManager.abi,
-)
-
 
 # Load accounts & election
 for private_key in get_parsed_private_keys():
     accounts.add(private_key)
+MANAGER_CONTRACT = Contract.from_abi(
+    "Election Manager",
+    config["networks"][network.show_active()]["manager_contract"],
+    ElectionManager.abi,
+)
 elections = get_elections(MANAGER_CONTRACT)
 if len(elections) == 0:
     active_election = None
 else:
     active_election = elections[0]
-
-# print(deploy_manager(accounts[-1]))

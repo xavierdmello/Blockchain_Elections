@@ -1,4 +1,7 @@
 dotenv: .env
 contract: ${CONTRACT}
 wallets:
-  from_key: ${PRIVATE_KEY}
+    from_key: ${PRIVATE_KEY}
+networks:
+    ftm-test:
+        manager_contract: "0x22aBf769D7BD29524B8F1CF147a47bcF38ab42EB"
