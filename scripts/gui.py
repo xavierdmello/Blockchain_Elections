@@ -67,7 +67,7 @@ def create_election_window(manager_contract, from_account):
             break
         if event == "create_election_btn":
             window["create_election_status"].update(
-                "Submitting Transaction...", visible=True, text_color="#52accc"
+                "Submitting transaction...", visible=True, text_color="#52accc"
             )
             window.refresh()
             try:
@@ -143,7 +143,7 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
             break
         if event == "confirm_run_for_office":
             window["run_for_office_status"].update(
-                "Submitting Transaction...", visible=True, text_color="#52accc"
+                "Submitting transaction...", visible=True, text_color="#52accc"
             )
             window.refresh()
             try:
