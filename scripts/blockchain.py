@@ -1,3 +1,4 @@
+from tkinter import E
 from brownie import (
     Contract,
     Wei,
@@ -42,9 +43,12 @@ def get_elections(manager_contract: Contract):
 
 
 def create_election(manager_contract, election_name, election_end_time, from_account):
-    return manager_contract.createElection(
+    if election_name == None or election_name == "":
+        raise ValueError("Election name cannot be empty")
+    tx =  manager_contract.createElection(
         election_name, election_end_time, {"from": from_account}
     )
+    tx.wait(1)
 
 
 def deploy_manager(from_account):
@@ -62,15 +66,17 @@ def get_num_votes(wrapped_election: WrappedElection, candidate_address: str) -> 
 
 
 def vote(wrapped_election: WrappedElection, candidate_address, from_account):
-    wrapped_election.contract.vote(candidate_address, {"from": from_account})
+    tx = wrapped_election.contract.vote(candidate_address, {"from": from_account})
+    tx.wait(1)
 
 
 def run_for_office(
     wrapped_election: WrappedElection, candidate_name: str, from_account: str
 ):
-    wrapped_election.contract.runForElection(
+    tx = wrapped_election.contract.runForElection(
         candidate_name, {"from": from_account, "value": Wei("0.05 ether")}
     )
+    tx.wait(1)
 
 
 def get_election_names(manager_contract):

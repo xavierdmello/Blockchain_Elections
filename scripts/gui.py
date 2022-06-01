@@ -1,12 +1,20 @@
+import time
+from turtle import width, window_width
 import PySimpleGUI as sg
+from black import err
 from blockchain import *
 from brownie import accounts
 from datetime import datetime as dt
 from dotenv import dotenv_values
 
 # TODO: Implement help menus (ex: question marks that let you hover and click on then, could be used in "add account" section)
-# TODO: Error handling
-# TODO: fix bug: after election list refresh, elections will get deslected
+
+# TODO: Put Election End Date beside title
+
+# BUG: Displays won't get refreshed properly and program will crash if more than one instance is open at a time. Update: this seems to happen randomly. I don't know why. I think that it's PYSimpleGUI's fault.
+# UPDATE #2: I think this is related to window.refresh() & forgetting to call it after making an update to the UI.
+
+# BUG: after election list refresh, elections will get deslected
 
 
 def build_ballot(candidates):
@@ -40,7 +48,14 @@ def create_election_window(manager_contract, from_account):
                 sg.Text("", key="date_display_text"),
                 sg.In(key="in_date", disabled=True, visible=False, enable_events=True),
             ],
-            [sg.Button("Create Election", key="create_election_btn")],
+            [
+                sg.Button("Create Election", key="create_election_btn"),
+                sg.Text(
+                    "",
+                    visible=False,
+                    key="create_election_status",
+                ),
+            ],
         ],
     )
     window = sg.Window("Create Election", layout, icon="images/icon.ico", finalize=True)
@@ -50,18 +65,46 @@ def create_election_window(manager_contract, from_account):
         if event == "back" or event == sg.WIN_CLOSED:
             break
         if event == "create_election_btn":
-            create_election(
-                manager_contract,
-                values["election_name"],
-                unix_time(values["in_date"]),
-                from_account,
+            window["create_election_status"].update(
+                "Submitting Transaction...", visible=True, text_color="#52accc"
             )
-            break
+            window.refresh()
+            try:
+                create_election(
+                    manager_contract,
+                    values["election_name"],
+                    unix_time(values["in_date"]),
+                    from_account,
+                )
+                break
+            except ValueError as e:
+                window["create_election_status"].update(
+                    parse_error(str(e)),
+                    visible=True,
+                    text_color="#860038",
+                )
         if event == "in_date":
             # Display selected date as election end time
             # Truncates time (end of the day) as it is not intended to be shown to the user
             window["date_display_text"].update(values["in_date"].split(" ")[0])
     window.close()
+
+
+def parse_error(error: str) -> str:
+    split_error = error.split(": '")
+
+    # Gas estimation errors are thrown before a transaction is sent,
+    # when brownie tries to decide how much of a transaction fee it needs to pay.
+    # If there is an impossibility in the program (ex: trying to vote for someome when you have already voted),
+    # brownie will throw an error, because it can't compute how to send the transaction.
+    # The error has a lot of "boilerplate", and should be parsed before shown to the end-user.
+    if len(split_error) > 1:
+        error_msg = split_error[1].split("'")[0].capitalize()
+        if "Execution reverted: " in error_msg:
+            error_msg = error_msg.split("Execution reverted: ")[1].capitalize()
+        return f"Error: {error_msg}"
+    else:
+        return f"Error: {error.capitalize()}"
 
 
 def run_for_office_window(wrapped_election: WrappedElection, from_account):
@@ -85,7 +128,10 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
                     "Your Balance: " + str(from_account.balance() / 10**18) + " ETH"
                 )
             ],
-            [sg.Button("Run For Office", key="confirm_run_for_office")],
+            [
+                sg.Button("Run For Office", key="confirm_run_for_office"),
+                sg.Text("", visible=False, key="run_for_office_status"),
+            ],
         ],
     )
     window = sg.Window("Run For Office", layout, icon="images/icon.ico")
@@ -95,8 +141,18 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
         if event == "back" or event == sg.WIN_CLOSED:
             break
         if event == "confirm_run_for_office":
-            run_for_office(wrapped_election, values["candidate_name"], from_account)
-            break
+            window["run_for_office_status"].update(
+                "Submitting Transaction...", visible=True, text_color="#52accc"
+            )
+            window.refresh()
+            try:
+                run_for_office(wrapped_election, values["candidate_name"], from_account)
+                break
+            except ValueError as e:
+                window["run_for_office_status"].update(
+                    parse_error(str(e)), visible=True, text_color="#860038"
+                )
+                window.refresh()
     window.close()
 
 
@@ -110,7 +166,10 @@ def add_account_window():
                 sg.Button("Back", key="back"),
             ],
             [sg.Text("Private Key:"), sg.In(key="private_key")],
-            [sg.Button("Add Account", key="add_account_btn")],
+            [
+                sg.Button("Add Account", key="add_account_btn"),
+                sg.Text("", text_color="#860038", key="account_error", visible=False),
+            ],
         ],
     )
     window = sg.Window("Add Account", layout, icon="images/icon.ico", finalize=True)
@@ -120,10 +179,19 @@ def add_account_window():
         if event == "back" or event == sg.WIN_CLOSED:
             break
         if event == "add_account_btn":
-            accounts.add(values["private_key"])
-            # append private key to PRIVATE_KEY variable in .env file
-            append_dotenv("PRIVATE_KEY", values["private_key"])
-            break
+            try:
+                if values["private_key"] in get_parsed_private_keys():
+                    window["account_error"].update(
+                        "Error: Account already added", visible=True
+                    )
+                else:
+                    accounts.add(values["private_key"])
+                    # append private key to PRIVATE_KEY variable in .env file
+                    append_dotenv("PRIVATE_KEY", values["private_key"])
+                    break
+            except ValueError as e:
+                window["account_error"].update(parse_error(str(e)), visible=True)
+
     window.close()
 
 
@@ -242,8 +310,10 @@ voting_col = [
             if len(initial_candidates) > 0
             else None,
             enable_events=True,
+            size=(15, 1),
         ),
         sg.Button("Vote", key="vote_button"),
+        sg.Text("", key="vote_status", visible=False),
     ],
 ]
 
@@ -295,15 +365,25 @@ while True:
     # End program if user closes window
     if event == sg.WIN_CLOSED:
         break
+
+    # Will be called anytime a event happens
+    if event != "" and event != None:
+        # Clear any temporary error/success messages
+        window["vote_status"].update(visible=False)
+        window.refresh()
+
     if event == "create_election":
         create_election_window(MANAGER_CONTRACT, values["account_list"])
         refresh_election_list(election_list, MANAGER_CONTRACT)
+
     if event == "add_account":
         add_account_window()
         refresh_account_list(account_list, accounts._accounts)
         # TODO: Show sentinel when account is added.
+
     if event == "refresh_elections":
         refresh_election_list(election_list, MANAGER_CONTRACT)
+
     if event == "election_list" and values["election_list"] != []:
         active_election = values["election_list"][0]
         candidates = get_candidates(active_election)
@@ -312,19 +392,55 @@ while True:
         )
         election_title.update(value=active_election.name)
         refresh_ballot(ballot, candidates)
+
     if event == "vote_button":
-        vote(active_election, values["candidate_list"].address, values["account_list"])
-        candidates = get_candidates(active_election)
-        refresh_ballot(ballot, candidates)
+        if values["candidate_list"] == "":
+            sg.popup("Please select a candidate to vote for.", icon="images/icon.ico")
+        else:
+            window["vote_status"].update(
+                "Submitting transaction...", visible=True, text_color="#52accc"
+            )
+            window.refresh()
+            try:
+                vote(
+                    active_election,
+                    values["candidate_list"].address,
+                    values["account_list"],
+                )
+                candidates = get_candidates(active_election)
+                refresh_ballot(ballot, candidates)
+                window["vote_status"].update(
+                    "Vote successful.", visible=True, text_color="#000000"
+                )
+                window.refresh()
+            except ValueError as e:
+                window["vote_status"].update(
+                    parse_error(str(e)), visible=True, text_color="#860038"
+                )
+                window.refresh()
+
     if event == "run_for_office":
-        run_for_office_window(values["election_list"][0], values["account_list"])
-        candidates = get_candidates(values["election_list"][0])
-        refresh_ballot(ballot, candidates)
-        candidate_list.update(
-            values=candidates, value=candidates[0] if len(candidates) > 0 else None
-        )
+        if len(values["election_list"]) == 0:
+            sg.popup(
+                "Please select an election.",
+                icon="images/icon.ico",
+            )
+        else:
+            run_for_office_window(values["election_list"][0], values["account_list"])
+            candidates = get_candidates(values["election_list"][0])
+            refresh_ballot(ballot, candidates)
+            candidate_list.update(
+                values=candidates, value=candidates[0] if len(candidates) > 0 else None
+            )
+
     if event == "refresh_ballot":
-        refresh_ballot(ballot, get_candidates(values["election_list"][0]))
+        if len(values["election_list"]) == 0:
+            sg.popup(
+                "Please select an election.",
+                icon="images/icon.ico",
+            )
+        else:
+            refresh_ballot(ballot, get_candidates(values["election_list"][0]))
 
 
 window.close()
