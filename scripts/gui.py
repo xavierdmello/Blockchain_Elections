@@ -8,11 +8,12 @@ from datetime import datetime as dt
 from dotenv import dotenv_values
 
 # TODO: Implement help menus (ex: question marks that let you hover and click on then, could be used in "add account" section)
-
+# TODO: Grey out buttons when you can't use them (ex: no eth, no candidates, already voted, etc)
+# TODO: change vote bar at bottom to winner bar after election is over
 # TODO: Put Election End Date beside title
 
 # BUG: Displays won't get refreshed properly and program will crash if more than one instance is open at a time. Update: this seems to happen randomly. I don't know why. I think that it's PYSimpleGUI's fault.
-# UPDATE #2: I think this is related to window.refresh() & forgetting to call it after making an update to the UI.
+# UPDATE #2: I think this is related to window.refresh() & forgetting to call it after making an update to the UI. Also seems to happen by calling it too often.
 
 # BUG: after election list refresh, elections will get deslected
 
@@ -370,7 +371,6 @@ while True:
     if event != "" and event != None:
         # Clear any temporary error/success messages
         window["vote_status"].update(visible=False)
-        window.refresh()
 
     if event == "create_election":
         create_election_window(MANAGER_CONTRACT, values["account_list"])
