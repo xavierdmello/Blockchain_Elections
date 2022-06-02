@@ -91,6 +91,10 @@ contract Election {
         electionEndTime = block.timestamp;
     }
 
+    function isClosed() public view returns (bool) {
+        return forceClosed == true || block.timestamp > electionEndTime;
+    }
+
     // Returns an array of the candidates with the highest number of votes.
     // If there isn't a tie, the return array will have a length of 1.
     // If there is a tie, it will be longer than one.

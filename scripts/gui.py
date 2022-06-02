@@ -1,3 +1,6 @@
+from faulthandler import disable
+from functools import cache
+from pydoc import visiblename
 import time
 from turtle import width, window_width
 import PySimpleGUI as sg
@@ -8,9 +11,7 @@ from datetime import datetime as dt
 from dotenv import dotenv_values
 
 # TODO: Implement help menus (ex: question marks that let you hover and click on then, could be used in "add account" section)
-# TODO: Grey out buttons when you can't use them (ex: no eth, no candidates, already voted, etc)
-# TODO: change vote bar at bottom to winner bar after election is over
-# TODO: Put Election End Date beside title
+# TODO: Highlights for election winners and gold/silver/bronze medals for candidates. Also add sorted randking system.
 
 # BUG: Displays won't get refreshed properly and program will crash if more than one instance is open at a time. Update: this seems to happen randomly. I don't know why. I think that it's PYSimpleGUI's fault.
 # UPDATE #2: I think this is related to window.refresh() & forgetting to call it after making an update to the UI. Also seems to happen by calling it too often.
@@ -243,6 +244,7 @@ sg.LOOK_AND_FEEL_TABLE["ElectionsCanadaTheme"] = {
 }
 sg.theme("ElectionsCanadaTheme")
 
+
 # Candidates list of default selected election
 initial_candidates = get_candidates(active_election)
 voting_col = [
@@ -302,8 +304,31 @@ voting_col = [
         )
     ],
     [sg.HorizontalSeparator()],
+    # Default UI if election is closed or there are no elections (disable voting buttons etc.)
     [
-        sg.T("My vote:"),
+        sg.T("My vote:", key="my_vote_text"),
+        sg.Combo(
+            initial_candidates,
+            key="candidate_list",
+            default_value=initial_candidates[0]
+            if len(initial_candidates) > 0
+            else None,
+            enable_events=True,
+            size=(15, 1),
+            disabled=True,
+        ),
+        sg.Button("Vote", key="vote_button", disabled=True),
+        sg.Text(
+            "End: " + get_end_time(elections[0]) if len(elections) > 0 else "",
+            key="vote_blurb",
+            text_color="#000000",
+        ),
+    ]
+    if len(elections) == 0 or is_closed(elections[0])
+    else
+    # Default UI if election is open
+    [
+        sg.T("My vote:", key="my_vote_text"),
         sg.Combo(
             initial_candidates,
             key="candidate_list",
@@ -314,7 +339,11 @@ voting_col = [
             size=(15, 1),
         ),
         sg.Button("Vote", key="vote_button"),
-        sg.Text("", key="vote_status", visible=False),
+        sg.Text(
+            "End: " + get_end_time(elections[0]) if len(elections) > 0 else "",
+            key="vote_blurb",
+            text_color="#000000",
+        ),
     ],
 ]
 
@@ -367,14 +396,10 @@ while True:
     if event == sg.WIN_CLOSED:
         break
 
-    # Will be called anytime a event happens
-    if event != "" and event != None:
-        # Clear any temporary error/success messages
-        window["vote_status"].update(visible=False)
-
     if event == "create_election":
         create_election_window(MANAGER_CONTRACT, values["account_list"])
         refresh_election_list(election_list, MANAGER_CONTRACT)
+        window.refresh()
 
     if event == "add_account":
         add_account_window()
@@ -391,13 +416,31 @@ while True:
             values=candidates, value=candidates[0] if len(candidates) > 0 else None
         )
         election_title.update(value=active_election.name)
+
+        # Grey out buttons if election is ended
+        if is_closed(active_election):
+            window["candidate_list"].update(disabled=True)
+            window["vote_button"].update(disabled=True)
+            window["vote_blurb"].update(
+                f"Election ended on {get_end_time(active_election)}",
+                text_color="#000000",
+            )
+        else:
+            window["candidate_list"].update(disabled=False)
+            window["vote_button"].update(disabled=False)
+            window["vote_blurb"].update(
+                "End: " + get_end_time(active_election),
+                text_color="#000000",
+                visible=True,
+            )
+
         refresh_ballot(ballot, candidates)
 
     if event == "vote_button":
         if values["candidate_list"] == "":
             sg.popup("Please select a candidate to vote for.", icon="images/icon.ico")
         else:
-            window["vote_status"].update(
+            window["vote_blurb"].update(
                 "Submitting transaction...", visible=True, text_color="#52accc"
             )
             window.refresh()
@@ -409,12 +452,12 @@ while True:
                 )
                 candidates = get_candidates(active_election)
                 refresh_ballot(ballot, candidates)
-                window["vote_status"].update(
+                window["vote_blurb"].update(
                     "Vote successful.", visible=True, text_color="#000000"
                 )
                 window.refresh()
             except ValueError as e:
-                window["vote_status"].update(
+                window["vote_blurb"].update(
                     parse_error(str(e)), visible=True, text_color="#860038"
                 )
                 window.refresh()

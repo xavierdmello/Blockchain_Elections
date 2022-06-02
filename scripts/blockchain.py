@@ -1,3 +1,4 @@
+from datetime import datetime
 from tkinter import E
 from brownie import (
     Contract,
@@ -45,10 +46,14 @@ def get_elections(manager_contract: Contract):
 def create_election(manager_contract, election_name, election_end_time, from_account):
     if election_name == None or election_name == "":
         raise ValueError("Election name cannot be empty")
-    tx =  manager_contract.createElection(
+    tx = manager_contract.createElection(
         election_name, election_end_time, {"from": from_account}
     )
     tx.wait(1)
+
+
+def is_closed(wrapped_election: WrappedElection):
+    return wrapped_election.contract.isClosed()
 
 
 def deploy_manager(from_account):
@@ -79,25 +84,34 @@ def run_for_office(
     tx.wait(1)
 
 
+def get_winners(wrapped_election: WrappedElection):
+    return wrapped_election.contract.getHighestVotes()
+
+
 def get_election_names(manager_contract):
     return manager_contract.getElectionNames()
 
 
-def get_candidates(election):
+def get_candidates(wrapped_election: WrappedElection):
     candidates = []
-    if election == None:
+    if wrapped_election == None:
         return candidates
 
-    candidate_addresses = election.contract.getCandidates()
+    candidate_addresses = wrapped_election.contract.getCandidates()
     for candidate_address in candidate_addresses:
         candidates.append(
             WrappedCandidate(
                 candidate_address,
-                get_candidate_name(election, candidate_address),
-                get_num_votes(election, candidate_address),
+                get_candidate_name(wrapped_election, candidate_address),
+                get_num_votes(wrapped_election, candidate_address),
             )
         )
     return candidates
+
+
+def get_end_time(wrapped_election: WrappedElection):
+    end_time = wrapped_election.contract.electionEndTime()
+    return datetime.fromtimestamp(end_time).strftime("%m/%d/%Y, %H:%M")
 
 
 # Load brownie project

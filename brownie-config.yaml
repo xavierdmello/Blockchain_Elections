@@ -4,4 +4,4 @@ wallets:
     from_key: ${PRIVATE_KEY}
 networks:
     ftm-test:
-        manager_contract: "0x3FE7cF9Ab5bF884491521BDdDd5126D496450BB8"
+        manager_contract: "0x2C57770B5DFf39DE13107B08c9d3a2DBE68bBB36"
