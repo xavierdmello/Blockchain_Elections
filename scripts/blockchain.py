@@ -1,5 +1,4 @@
 from datetime import datetime
-from tkinter import E
 from brownie import (
     Contract,
     Wei,
