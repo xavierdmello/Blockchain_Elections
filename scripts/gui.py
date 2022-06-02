@@ -1,5 +1,4 @@
 import PySimpleGUI as sg
-from black import err
 from blockchain import *
 from brownie import accounts
 from datetime import datetime as dt
