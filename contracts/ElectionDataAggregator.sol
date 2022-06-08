@@ -17,7 +17,6 @@ struct ElectionData {
     bool closed;
 }
 
-
 struct Candidate {
     uint votes;
     string name;
@@ -40,7 +39,7 @@ contract ElectionDataAggregator {
         }
         return bundledElections;
     }
-
+    
     
     function getElectionData(address _election) public view returns(ElectionData memory) {
         Election election = Election(_election);
@@ -54,6 +53,18 @@ contract ElectionDataAggregator {
         }
 
         return ElectionData(election.electionName(), election.getVoters(), candidates, election.owner(),election.candidateFee(), election.electionEndTime(), election.electionStartTime(), election.isClosed());
+    }
+
+    function getAllElectionsData(address _electionManager) public view returns(ElectionData[] memory) {
+        ElectionManager electionManager = ElectionManager(_electionManager);
+        Election[] memory elections = electionManager.getElections();
+        ElectionData[] memory allElectionsData = new ElectionData[](elections.length);
+
+        for (uint256 i; i < elections.length; i++) {
+            allElectionsData[i] = getElectionData(address(elections[i]));
+        }
+
+        return allElectionsData;
     }
     
 }
