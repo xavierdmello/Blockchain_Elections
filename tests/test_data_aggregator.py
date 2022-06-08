@@ -48,7 +48,7 @@ def test_get_election_data():
     election_manager = ElectionManager.deploy({"from": account})
 
     ELECTION_NAME = "USA"
-    ELECTION_END_TIME = time() + 1000
+    ELECTION_END_TIME = time() + 10000
     election = election_manager.createElection(
         ELECTION_NAME, ELECTION_END_TIME, {"from": account}
     ).return_value
