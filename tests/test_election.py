@@ -1,39 +1,46 @@
 import pytest
 from brownie import Election, Wei, accounts
-from scripts.blockchain import get_account
+from scripts.blockchain import load_accounts_from_dotenv
 from time import time, sleep
 
 
 def test_get_candidate_name():
-    account = get_account(0)
-    address = account.address
+    # Arrange
+    load_accounts_from_dotenv()
+    account = accounts[0]
     election = Election.deploy(
-        address, "TestElection", time() + 99999999, {"from": account}
+        account, "TestElection", time() + 99999999, {"from": account}
     )
 
+    # Act
     expected = "John Doe"
     election.runForElection(expected, {"from": account, "value": Wei("0.05 ether")})
 
-    assert expected == election.candidateNames(address)
+    # Assert
+    assert expected == election.candidateNames(account)
 
 
 @pytest.mark.xfail
 def test_time_close():
-    account = get_account(0)
+    # Arrange
+    account = accounts[0]
     address = account.address
     election = Election.deploy(address, "TestElection", time() + 2, {"from": account})
 
+    # Act
     sleep(3)
     election.runForElection(
         "TestCandidate", {"from": account, "value": Wei("0.05 ether")}
     )
 
+    # Assert
     assert election.isCandidate(address) == True
 
 
 @pytest.mark.xfail
 def test_close():
-    account = get_account(0)
+    load_accounts_from_dotenv()
+    account = accounts[0]
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}
@@ -48,7 +55,8 @@ def test_close():
 
 
 def test_vote():
-    account = get_account(0)
+    load_accounts_from_dotenv()
+    account = accounts[0]
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}
@@ -63,7 +71,8 @@ def test_vote():
 
 
 def test_run_for_election():
-    account = get_account(0)
+    load_accounts_from_dotenv()
+    account = accounts[0]
     address = account.address
     election = Election.deploy(
         address, "TestElection", time() + 99999999, {"from": account}

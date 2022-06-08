@@ -4,4 +4,8 @@ wallets:
     from_key: ${PRIVATE_KEY}
 networks:
     ftm-test:
-        manager_contract: "0x2C57770B5DFf39DE13107B08c9d3a2DBE68bBB36"
+        manager_contract: "0x034A1A80d44000Eb9Ef2785422D43708B7AEB5d8"
+        aggregator_contract: "0xE4E1C7B0850f5176C281255C53ebf698a3348E44"
+    rinkeby:
+        manager_contract: "0x7b2c32f9E8720254F56A4cA009666ce973a43351"
+        aggregator_contract: "0x6A9cA32F44F86468D04342000e4FBB329FEcFecB"

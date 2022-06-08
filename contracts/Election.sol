@@ -72,6 +72,10 @@ contract Election {
         payable(msg.sender).transfer(address(this).balance);
     }
 
+    function getVoters() public view returns(address[] memory) {
+        return voters;
+    }
+
     modifier onlyOwner() {
         require(
             msg.sender == owner,
