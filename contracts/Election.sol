@@ -85,8 +85,7 @@ contract Election {
     }
 
     modifier onlyElectionRunning() {
-        assert(forceClosed == false);
-        assert(block.timestamp <= electionEndTime);
+        assert(isClosed() == false);
         _;
     }
 
