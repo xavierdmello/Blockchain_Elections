@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="c4ca5192-9ac2-4783-9ca5-7401f87c1779" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/gui.pyw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/brownie-config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/brownie-config.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -12,6 +12,9 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/scripts/gui.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -27,7 +30,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/Users/dmell/Documents/Programming/Web3/gr-12-ics-portfolio-xavierdmello"
+    "last_opened_file_path": "C:/Users/dmell/Documents/Programming/Web3/Learning/Web3Py/Voting"
   }
 }]]></component>
   <component name="RunManager">
@@ -69,6 +72,8 @@
       <updated>1652800711956</updated>
       <workItem from="1652800714328" duration="14000" />
       <workItem from="1654113684530" duration="336000" />
+      <workItem from="1654694193880" duration="321000" />
+      <workItem from="1654820755620" duration="25000" />
     </task>
     <servers />
   </component>

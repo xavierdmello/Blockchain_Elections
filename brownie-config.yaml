@@ -9,3 +9,9 @@ networks:
     rinkeby:
         manager_contract: "0x7b2c32f9E8720254F56A4cA009666ce973a43351"
         aggregator_contract: "0x6A9cA32F44F86468D04342000e4FBB329FEcFecB"
+    ropsten:
+        manager_contract: "0x57C9133E216eeEc45F551BC93887987E4af09074"
+        aggregator_contract: "0xf9b645295Bb4Fe0e038747641329360FBB8Cd9C4"
+    optimism-test:
+        manager_contract: "0x4AF040b1E507d9531fF92B4512aBf42dAFcBADF0"
+        aggregator_contract: "0x57C9133E216eeEc45F551BC93887987E4af09074"
