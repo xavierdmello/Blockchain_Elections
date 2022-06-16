@@ -1,3 +1,4 @@
+from sys import maxsize
 from threading import Thread
 import PySimpleGUI as sg
 from scripts.blockchain import *
@@ -221,6 +222,10 @@ def get_selected_election(window_values) -> WrappedElection:
     )
 
 
+def admin_console_window():
+    pass
+
+
 def vote(
     wrapped_election: WrappedElection,
     candidate_address,
@@ -285,6 +290,11 @@ def refresh_ballot1(
     # Update title
     window["election_title"].update(value=election_data.election_name)
 
+    # Enable election admin console if user is the election admin
+    if active_account == election_data.owner:
+        window["admin_console"].update(visible=True)
+    else:
+        window["admin_console"].update(visible=False)
     # Reset any potenitally greyed out buttons (base case)
     window["run_for_office"].update(disabled=False)
     window["candidate_list"].update(disabled=False)
@@ -372,9 +382,13 @@ def main():
                 if len(accounts._accounts) > 0
                 else None,
                 enable_events=True,
+                expand_x=True,
             ),
             sg.Button(
-                "Admin Console", key="admin", button_color="#52accc", visible=False
+                "Admin Console",
+                key="admin_console",
+                button_color="#52accc",
+                visible=False,
             ),
             sg.Button("Add Account", key="add_account"),
         ],
@@ -467,7 +481,10 @@ def main():
 
     # Create the window
     window = sg.Window(
-        "Elections Canada", layout, icon="images/icon.ico", finalize=True
+        "Elections Canada",
+        layout,
+        icon="images/icon.ico",
+        finalize=True,
     )
 
     # If set to True, new manager + aggregator contracts will be deployed.
