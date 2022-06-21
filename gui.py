@@ -55,7 +55,7 @@ class ElectionData:
         )
         self.candidate_addresses = set(candidate_addresses)
 
-        # Calcualte rank of each Candidate.
+        # Calculate rank of each Candidate.
         # Note that if two candidates have the same amount of votes, they are the same rank.
         for i, wrapped_candidate in enumerate(wrapped_candidates):
             # If the candidate is the first in the sorted list, it is rank 1
@@ -109,7 +109,7 @@ def create_election(manager_contract, election_name, election_end_time, from_acc
     if election_name is None or election_name == "":
         raise ValueError("Election name cannot be empty")
 
-    tx_reciept = w3.eth.wait_for_transaction_receipt(
+    w3.eth.wait_for_transaction_receipt(
         w3.eth.send_raw_transaction(
             w3.eth.account.sign_transaction(
                 manager_contract.functions.createElection(
@@ -129,9 +129,9 @@ def create_election(manager_contract, election_name, election_end_time, from_acc
 
 
 def run_for_office(
-    wrapped_election: WrappedElection, candidate_name: str, from_account: str
+    wrapped_election: WrappedElection, candidate_name: str, from_account: Account
 ):
-    tx_reciept = w3.eth.wait_for_transaction_receipt(
+    w3.eth.wait_for_transaction_receipt(
         w3.eth.send_raw_transaction(
             w3.eth.account.sign_transaction(
                 wrapped_election.contract.functions.runForElection(
@@ -151,8 +151,8 @@ def run_for_office(
     )
 
 
-def withdraw_revenue(wrapped_election: WrappedElection, from_account: str):
-    tx_reciept = w3.eth.wait_for_transaction_receipt(
+def withdraw_revenue(wrapped_election: WrappedElection, from_account: Account):
+    w3.eth.wait_for_transaction_receipt(
         w3.eth.send_raw_transaction(
             w3.eth.account.sign_transaction(
                 wrapped_election.contract.functions.withdrawRevenue().buildTransaction(
@@ -249,7 +249,7 @@ def parse_error(error: str) -> str:
 
     # Gas estimation errors are thrown before a transaction is sent,
     # when brownie tries to decide how much of a transaction fee it needs to pay.
-    # If there is an impossibility in the program (ex: trying to vote for someome when you have already voted),
+    # If there is an impossibility in the program (ex: trying to vote for someone when you have already voted),
     # brownie will throw an error, because it can't compute how to send the transaction.
     # The error has a lot of "boilerplate", and should be parsed before shown to the end-user.
     if len(split_error) > 1:
@@ -443,7 +443,7 @@ def vote(
     aggregator_contract,
 ):
     try:
-        tx_reciept = w3.eth.wait_for_transaction_receipt(
+        w3.eth.wait_for_transaction_receipt(
             w3.eth.send_raw_transaction(
                 w3.eth.account.sign_transaction(
                     wrapped_election.contract.functions.vote(
@@ -499,8 +499,8 @@ def refresh_ballot(
     # Enable election admin console if user is the election admin
     if active_account.address == election_data.owner:
         window["admin_console"].update(visible=True)
-        # Hide vote spacer beacause the now visible admin console button will take up the space in it's place.
-        # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dyanmic layouts.
+        # Hide vote spacer because the now visible admin console button will take up the space in its place.
+        # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dynamic layouts.
         window["vote_spacer"].update(visible=False)
     else:
         # Hide, then show refresh ballot button to make sure elements show up in the right order
@@ -716,14 +716,14 @@ def main():
         election_manager_abi = json.load(f)
     with open("abi/ElectionDataAggregator.json", "r") as f:
         election_data_aggregator_abi = json.load(f)
-    MANAGER_CONTRACT = w3.eth.contract(
+    manager_contract = w3.eth.contract(
         address=MANAGER_CONTRACT_ADDRESS, abi=election_manager_abi
     )
-    AGGREGATOR_CONTRACT = w3.eth.contract(
+    aggregator_contract = w3.eth.contract(
         address=AGGREGATOR_CONTRACT_ADDRESS, abi=election_data_aggregator_abi
     )
 
-    refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
+    refresh_election_list(window, manager_contract, aggregator_contract)
 
     # Create an event loop
     while True:
@@ -733,8 +733,8 @@ def main():
             break
 
         if event == "create_election":
-            create_election_window(MANAGER_CONTRACT, values["account_list"])
-            refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
+            create_election_window(manager_contract, values["account_list"])
+            refresh_election_list(window, manager_contract, aggregator_contract)
 
         if event == "add_account":
             previously_selected_account = values["account_list"]
@@ -752,11 +752,11 @@ def main():
                     window,
                     values["account_list"],
                     get_selected_election(values),
-                    AGGREGATOR_CONTRACT,
+                    aggregator_contract,
                 )
 
         if event == "refresh_elections":
-            refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
+            refresh_election_list(window, manager_contract, aggregator_contract)
 
         # If user selects a different election from the election list
         if event == "election_list" and get_selected_election(values) is not None:
@@ -764,7 +764,7 @@ def main():
                 window,
                 values["account_list"],
                 get_selected_election(values),
-                AGGREGATOR_CONTRACT,
+                aggregator_contract,
             )
 
         if event == "vote_button":
@@ -783,7 +783,7 @@ def main():
                     values["account_list"],
                     window,
                     values,
-                    AGGREGATOR_CONTRACT,
+                    aggregator_contract,
                 )
 
         if event == "run_for_office":
@@ -800,7 +800,7 @@ def main():
                     window,
                     values["account_list"],
                     get_selected_election(values),
-                    AGGREGATOR_CONTRACT,
+                    aggregator_contract,
                 )
 
         if event == "refresh_ballot":
@@ -814,7 +814,7 @@ def main():
                     window,
                     values["account_list"],
                     get_selected_election(values),
-                    AGGREGATOR_CONTRACT,
+                    aggregator_contract,
                 )
 
         if event == "account_list":
@@ -823,7 +823,7 @@ def main():
                     window,
                     values["account_list"],
                     get_selected_election(values),
-                    AGGREGATOR_CONTRACT,
+                    aggregator_contract,
                 )
 
         if event == "admin_console":
