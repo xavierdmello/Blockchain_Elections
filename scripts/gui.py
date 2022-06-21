@@ -1,12 +1,10 @@
-from sys import maxsize
 from threading import Thread
 import PySimpleGUI as sg
 from scripts.blockchain import *
-from brownie import accounts, network, Election, ElectionManager, ElectionDataAggregator
+from brownie import accounts, network, ElectionManager, ElectionDataAggregator
 from datetime import datetime as dt
 from dotenv import dotenv_values
 
-# TODO: Implement help menus (ex: question marks that let you hover and click on then, could be used in "add account" section)
 # TODO: Highlights for election winners and gold/silver/bronze medals for candidates.
 
 # BUG: Displays won't get refreshed properly and program will crash if more than one instance is open at a time. Update: this seems to happen randomly. I don't know why. I think that it's PYSimpleGUI's fault.
@@ -110,7 +108,9 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
             ],
             [
                 sg.Text(
-                    "Your Balance: " + str(from_account.balance() / 10**18) + " ETH"
+                    "Your Balance: "
+                    + str(get_balance(from_account) / 10**18)
+                    + " ETH"
                 )
             ],
             [
@@ -201,13 +201,79 @@ def refresh_election_list(
     window.refresh()
 
 
+def get_selected_election(window_values) -> WrappedElection:
+    return (
+        None
+        if len(window_values["election_list"]) == 0
+        else window_values["election_list"][0]
+    )
+
+
+def admin_console_window(wrapped_election: WrappedElection, from_account):
+    layout = (
+        [
+            [
+                sg.Text(
+                    "Election Revenue: "
+                    + str(get_balance(wrapped_election.contract) / 10**18)
+                    + " ETH"
+                ),
+                sg.Push(),
+                sg.Button("Back", key="back"),
+            ],
+            [
+                sg.Button("Withdraw Revenue", key="withdraw_revenue_btn"),
+                sg.Text(
+                    "", text_color="#860038", key="admin_console_status", visible=False
+                ),
+            ],
+        ],
+    )
+    window = sg.Window("Admin Console", layout, icon="images/icon.ico", finalize=True)
+
+    while True:
+        event, values = window.read()
+        if event == "back" or event == sg.WIN_CLOSED:
+            break
+        if event == "withdraw_revenue_btn":
+            window["admin_console_status"].update(
+                "Submitting transaction...", visible=True, text_color="#52accc"
+            )
+            window.refresh()
+            try:
+                withdraw_revenue(wrapped_election, from_account)
+                break
+            except ValueError as e:
+                window["admin_console_status"].update(parse_error(str(e)), visible=True)
+
+    window.close()
+
+
+# Convert MM/DD/YYYY H:M:S date to local Unix timestamp
+def unix_time(MMDDYYYY):
+    return int(dt.timestamp(dt.strptime(MMDDYYYY, "%m/%d/%Y %H:%M:%S")))
+
+
+# Convert unix timestamp to MM/DD/YYYY H:M date
+def formatted_time(unix_time: int) -> str:
+    return dt.fromtimestamp(unix_time).strftime("%m/%d/%Y, %H:%M")
+
+
+def refresh_election_list(
+    window: sg.Window, manager_contract: Contract, aggregator_contract: Contract
+):
+    window["election_list"].update(
+        values=get_elections(manager_contract, aggregator_contract)
+    )
+    window.refresh()
+
+
 # TODO: Note: this function may not be actually needed
-def refresh_account_list(window: sg.Window, accounts, autoselect_last=False):
+def refresh_account_list(window: sg.Window, accounts, previously_selected_account=None):
     # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
-    if autoselect_last:
+    if not previously_selected_account:
         window["account_list"].update(values=accounts._accounts, value=accounts[-1])
     else:
-        previously_selected_account = window["account_list"].value
         window["account_list"].update(
             values=accounts._accounts, value=previously_selected_account
         )
@@ -220,10 +286,6 @@ def get_selected_election(window_values) -> WrappedElection:
         if len(window_values["election_list"]) == 0
         else window_values["election_list"][0]
     )
-
-
-def admin_console_window():
-    pass
 
 
 def vote(
@@ -293,8 +355,17 @@ def refresh_ballot1(
     # Enable election admin console if user is the election admin
     if active_account == election_data.owner:
         window["admin_console"].update(visible=True)
+        # Hide vote spacer beacause the now visible admin console button will take up the space in it's place.
+        # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dyanmic layouts.
+        window["vote_spacer"].update(visible=False)
     else:
+        # Hide, then show refresh ballot button to make sure elements show up in the right order
+        window["refresh_ballot"].update(visible=False)
+
+        window["vote_spacer"].update(visible=True)
         window["admin_console"].update(visible=False)
+        window["refresh_ballot"].update(visible=True)
+
     # Reset any potenitally greyed out buttons (base case)
     window["run_for_office"].update(disabled=False)
     window["candidate_list"].update(disabled=False)
@@ -384,12 +455,6 @@ def main():
                 enable_events=True,
                 expand_x=True,
             ),
-            sg.Button(
-                "Admin Console",
-                key="admin_console",
-                button_color="#52accc",
-                visible=False,
-            ),
             sg.Button("Add Account", key="add_account"),
         ],
         [sg.HorizontalSeparator()],
@@ -414,8 +479,15 @@ def main():
             ),
             sg.Push(),
             sg.T(
-                size=(7, 1)
+                size=(7, 1),
+                key="vote_spacer",
             ),  # Dummy spacer element to keep election title somewhat centered.
+            sg.Button(
+                "Admin",
+                key="admin_console",
+                button_color="#52accc",
+                visible=False,
+            ),
             sg.Button("⟳", key="refresh_ballot"),
         ],
         [
@@ -423,8 +495,8 @@ def main():
                 [],
                 headings=["Candidate", "Votes", "Address"],
                 key="ballot",
-                expand_x=True,
                 expand_y=True,
+                expand_x=True,
                 # row_colors=("#ffffff", "#e3e5e8"),
                 # alternating_row_color=False,
                 justification="c",
@@ -520,12 +592,17 @@ def main():
             refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
 
         if event == "add_account":
+            previously_selected_account = values["account_list"]
             new_account = add_account_window()
             if new_account is None:
                 # If no account was added
-                refresh_account_list(window, accounts)
+                refresh_account_list(
+                    window,
+                    accounts,
+                    previously_selected_account=previously_selected_account,
+                )
             else:
-                refresh_account_list(window, accounts, autoselect_last=True)
+                refresh_account_list(window, accounts)
             # TODO: Show sentinel when account is added.
 
         if event == "refresh_elections":
@@ -601,5 +678,16 @@ def main():
                 get_selected_election(values),
                 AGGREGATOR_CONTRACT,
             )
+
+        if event == "admin_console":
+            if len(values["election_list"]) == 0:
+                sg.popup(
+                    "Please select an election.",
+                    icon="images/icon.ico",
+                )
+            else:
+                admin_console_window(
+                    get_selected_election(values), values["account_list"]
+                )
 
     window.close()

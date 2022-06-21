@@ -72,6 +72,10 @@ def get_elections(manager_contract: Contract, aggregator_contract: Contract):
     return elections
 
 
+def get_balance(address):
+    return address.balance()
+
+
 def get_election_data(
     wrapped_election: WrappedElection, aggregator_contract: Contract
 ) -> ElectionData:
@@ -97,6 +101,11 @@ def run_for_office(
     tx = wrapped_election.contract.runForElection(
         candidate_name, {"from": from_account, "value": Wei("0.05 ether")}
     )
+    tx.wait(1)
+
+
+def withdraw_revenue(wrapped_election: WrappedElection, from_account: str):
+    tx = wrapped_election.contract.withdrawRevenue({"from": from_account})
     tx.wait(1)
 
 
