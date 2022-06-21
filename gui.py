@@ -1,9 +1,189 @@
-from threading import Thread
+import os
+from textwrap import wrap
 import PySimpleGUI as sg
-from scripts.blockchain import *
-from brownie import accounts, network, ElectionManager, ElectionDataAggregator
+import json
 from datetime import datetime as dt
-from dotenv import dotenv_values
+from dotenv import *
+from genericpath import exists
+from web3 import Web3
+
+
+class WrappedElection:
+    def __str__(self):
+        return self.name
+
+    def __init__(self, election_address: str, election_name: str):
+        with open("abi/Election.json") as f:
+            abi = json.load(f)
+        self.contract = w3.eth.contract(address=election_address, abi=abi)
+        self.name = election_name
+
+
+class WrappedCandidate:
+    def __str__(self):
+        return self.name
+
+    def __init__(self, votes: int, candidate_name: str, candidate_address: str):
+        self.address = candidate_address
+        self.name = candidate_name
+        self.votes = votes
+
+
+class ElectionData:
+    def __init__(self, raw_election_data):
+        self.election_name = raw_election_data[0]
+        self.voters = set(raw_election_data[1])
+        self.owner = raw_election_data[3]
+        self.candidate_fee = raw_election_data[4]
+        self.election_end_time = raw_election_data[5]
+        self.election_start_time = raw_election_data[6]
+        self.closed = raw_election_data[7]
+        self.ranks = []
+
+        raw_candidates = raw_election_data[2]
+        wrapped_candidates = []
+        candidate_addresses = []
+        for raw_candidate in raw_candidates:
+            wrapped_candidates.append(
+                WrappedCandidate(raw_candidate[0], raw_candidate[1], raw_candidate[2])
+            )
+            candidate_addresses.append(raw_candidate[2])
+        # Sort wrapped candidates by votes
+        self.wrapped_candidates = sorted(
+            wrapped_candidates,
+            key=lambda wrapped_candidate: wrapped_candidate.votes,
+            reverse=True,
+        )
+        self.candidate_addresses = set(candidate_addresses)
+
+        # Calcualte rank of each Candidate.
+        # Note that if two candidates have the same amount of votes, they are the same rank.
+        for i, wrapped_candidate in enumerate(wrapped_candidates):
+            # If the candidate is the first in the sorted list, it is rank 1
+            if i == 0:
+                self.ranks.append(1)
+            else:
+                # If the candidate has the same amount of votes as the one before it, it is the same rank
+                if wrapped_candidate.votes == wrapped_candidates[i - 1].votes:
+                    self.ranks.append(self.ranks[i - 1])
+                else:
+                    self.ranks.append(self.ranks[i - 1] + 1)
+
+
+class Account:
+    def __str__(self):
+        return self.address
+
+    def __init__(self, private_key):
+        self.private_key = private_key
+        self.address = w3.eth.account.from_key(private_key).address
+
+
+def get_elections(manager_contract, aggregator_contract):
+    elections = []
+    raw_election_bundles = aggregator_contract.functions.getElectionsBundledWithNames(
+        manager_contract.address
+    ).call()
+    for raw_election_bundle in raw_election_bundles:
+        elections.append(
+            WrappedElection(raw_election_bundle[0], raw_election_bundle[1])
+        )
+
+    return elections
+
+
+def get_balance(address):
+    return w3.eth.get_balance(address)
+
+
+def get_election_data(
+    wrapped_election: WrappedElection, aggregator_contract
+) -> ElectionData:
+    return ElectionData(
+        aggregator_contract.functions.getElectionData(
+            wrapped_election.contract.address
+        ).call()
+    )
+
+
+def create_election(manager_contract, election_name, election_end_time, from_account):
+    if election_name == None or election_name == "":
+        raise ValueError("Election name cannot be empty")
+
+    tx_reciept = w3.eth.wait_for_transaction_receipt(
+        w3.eth.send_raw_transaction(
+            w3.eth.account.sign_transaction(
+                manager_contract.functions.createElection(
+                    election_name, election_end_time
+                ).buildTransaction(
+                    {
+                        "chainId": chain_id,
+                        "from": from_account.address,
+                        "nonce": w3.eth.get_transaction_count(from_account.address),
+                        "gasPrice": w3.eth.gas_price,
+                    }
+                ),
+                private_key=from_account.private_key,
+            ).rawTransaction
+        )
+    )
+
+
+def run_for_office(
+    wrapped_election: WrappedElection, candidate_name: str, from_account: str
+):
+    tx_reciept = w3.eth.wait_for_transaction_receipt(
+        w3.eth.send_raw_transaction(
+            w3.eth.account.sign_transaction(
+                wrapped_election.contract.functions.runForElection(
+                    candidate_name
+                ).buildTransaction(
+                    {
+                        "chainId": chain_id,
+                        "from": from_account.address,
+                        "nonce": w3.eth.get_transaction_count(from_account.address),
+                        "gasPrice": w3.eth.gas_price,
+                        "value": w3.toWei("0.05", "ether"),
+                    }
+                ),
+                private_key=from_account.private_key,
+            ).rawTransaction
+        )
+    )
+
+
+def withdraw_revenue(wrapped_election: WrappedElection, from_account: str):
+    tx_reciept = w3.eth.wait_for_transaction_receipt(
+        w3.eth.send_raw_transaction(
+            w3.eth.account.sign_transaction(
+                wrapped_election.contract.functions.withdrawRevenue().buildTransaction(
+                    {
+                        "chainId": chain_id,
+                        "from": from_account.address,
+                        "nonce": w3.eth.get_transaction_count(from_account.address),
+                        "gasPrice": w3.eth.gas_price,
+                    }
+                ),
+                private_key=from_account.private_key,
+            ).rawTransaction
+        )
+    )
+
+
+def load_accounts_from_dotenv():
+    accounts = []
+    for private_key in get_parsed_private_keys():
+        accounts.append(Account(private_key))
+    return accounts
+
+
+# Returns empty list if .env does not exist
+def get_parsed_private_keys():
+    if exists(".env"):
+        return os.getenv("PRIVATE_KEY").split(",")
+    else:
+        return []
+
 
 # Opens new window for creating election
 def create_election_window(manager_contract, from_account):
@@ -94,14 +274,17 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
             [
                 sg.Text(
                     "Fee: "
-                    + str(wrapped_election.contract.candidateFee() / 10**18)
+                    + str(
+                        wrapped_election.contract.functions.candidateFee().call()
+                        / 10**18
+                    )
                     + " ETH"
                 )
             ],
             [
                 sg.Text(
                     "Your Balance: "
-                    + str(get_balance(from_account) / 10**18)
+                    + str(get_balance(from_account.address) / 10**18)
                     + " ETH"
                 )
             ],
@@ -134,7 +317,7 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
 
 
 # Opens new window for adding account to the brownie accounts list. Returns new account if it was added, None if it was not.
-def add_account_window():
+def add_account_window(accounts):
     layout = (
         [
             [
@@ -165,8 +348,10 @@ def add_account_window():
                     # append private key to PRIVATE_KEY variable in .env file
                     append_dotenv("PRIVATE_KEY", values["private_key"])
 
+                    accounts.append(Account(values["private_key"]))
+
                     window.close()
-                    return accounts.add(values["private_key"])
+                    return Account(values["private_key"])
             except ValueError as e:
                 window["account_error"].update(parse_error(str(e)), visible=True)
 
@@ -183,9 +368,7 @@ def formatted_time(unix_time: int) -> str:
     return dt.fromtimestamp(unix_time).strftime("%m/%d/%Y, %H:%M")
 
 
-def refresh_election_list(
-    window: sg.Window, manager_contract: Contract, aggregator_contract: Contract
-):
+def refresh_election_list(window: sg.Window, manager_contract, aggregator_contract):
     window["election_list"].update(
         values=get_elections(manager_contract, aggregator_contract)
     )
@@ -206,7 +389,7 @@ def admin_console_window(wrapped_election: WrappedElection, from_account):
             [
                 sg.Text(
                     "Election Revenue: "
-                    + str(get_balance(wrapped_election.contract) / 10**18)
+                    + str(get_balance(wrapped_election.contract.address) / 10**18)
                     + " ETH"
                 ),
                 sg.Push(),
@@ -250,9 +433,7 @@ def formatted_time(unix_time: int) -> str:
     return dt.fromtimestamp(unix_time).strftime("%m/%d/%Y, %H:%M")
 
 
-def refresh_election_list(
-    window: sg.Window, manager_contract: Contract, aggregator_contract: Contract
-):
+def refresh_election_list(window: sg.Window, manager_contract, aggregator_contract):
     window["election_list"].update(
         values=get_elections(manager_contract, aggregator_contract)
     )
@@ -262,20 +443,12 @@ def refresh_election_list(
 def refresh_account_list(window: sg.Window, accounts, previously_selected_account=None):
     # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
     if not previously_selected_account:
-        window["account_list"].update(values=accounts._accounts, value=accounts[-1])
+        window["account_list"].update(values=accounts, value=accounts[-1])
     else:
         window["account_list"].update(
-            values=accounts._accounts, value=previously_selected_account
+            values=accounts, value=previously_selected_account
         )
     window.refresh()
-
-
-def get_selected_election(window_values) -> WrappedElection:
-    return (
-        None
-        if len(window_values["election_list"]) == 0
-        else window_values["election_list"][0]
-    )
 
 
 def vote(
@@ -287,8 +460,24 @@ def vote(
     aggregator_contract,
 ):
     try:
-        tx = wrapped_election.contract.vote(candidate_address, {"from": from_account})
-        tx.wait(1)
+        tx_reciept = w3.eth.wait_for_transaction_receipt(
+            w3.eth.send_raw_transaction(
+                w3.eth.account.sign_transaction(
+                    wrapped_election.contract.functions.vote(
+                        candidate_address
+                    ).buildTransaction(
+                        {
+                            "chainId": chain_id,
+                            "from": from_account.address,
+                            "nonce": w3.eth.get_transaction_count(from_account.address),
+                            "gasPrice": w3.eth.gas_price,
+                        }
+                    ),
+                    private_key=from_account.private_key,
+                ).rawTransaction
+            )
+        )
+
         window["vote_blurb"].update(
             "Vote successful.", visible=True, text_color="#000000"
         )
@@ -311,24 +500,6 @@ def refresh_ballot(
     wrapped_election: WrappedElection,
     aggregator_contract,
 ):
-    thread = Thread(
-        target=refresh_ballot1,
-        args=(
-            window,
-            active_account,
-            wrapped_election,
-            aggregator_contract,
-        ),
-    )
-    thread.start()
-
-
-def refresh_ballot1(
-    window: sg.Window,
-    active_account: str,
-    wrapped_election: WrappedElection,
-    aggregator_contract: Contract,
-):
     election_data = get_election_data(wrapped_election, aggregator_contract)
 
     # Update candidate list
@@ -343,7 +514,7 @@ def refresh_ballot1(
     window["election_title"].update(value=election_data.election_name)
 
     # Enable election admin console if user is the election admin
-    if active_account == election_data.owner:
+    if active_account.address == election_data.owner:
         window["admin_console"].update(visible=True)
         # Hide vote spacer beacause the now visible admin console button will take up the space in it's place.
         # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dyanmic layouts.
@@ -366,10 +537,13 @@ def refresh_ballot1(
         visible=True,
     )
     # Grey out button if user is already running for the election
-    if active_account in election_data.candidate_addresses:
+    if (
+        active_account.address in election_data.candidate_addresses
+        or active_account == ""
+    ):
         window["run_for_office"].update(disabled=True)
     # Grey out buttons if user has already voted
-    if active_account in election_data.voters:
+    if active_account.address in election_data.voters or active_account == "":
         window["candidate_list"].update(disabled=True)
         window["vote_button"].update(disabled=True)
         window["vote_blurb"].update(
@@ -388,9 +562,14 @@ def refresh_ballot1(
 
     # Update ballot
     unwrapped_candidates = []
-    for wrapped_candidate in election_data.wrapped_candidates:
+    for i, wrapped_candidate in enumerate(election_data.wrapped_candidates):
         unwrapped_candidates.append(
-            [wrapped_candidate.name, wrapped_candidate.votes, wrapped_candidate.address]
+            [
+                election_data.ranks[i],
+                wrapped_candidate.name,
+                wrapped_candidate.votes,
+                wrapped_candidate.address,
+            ]
         )
     window["ballot"].update(unwrapped_candidates)
 
@@ -398,10 +577,14 @@ def refresh_ballot1(
     window.refresh()
 
 
-# TODO: Fix error if environment variable does not already exist. Create variable, maybe?
 def append_dotenv(env: str, to_append: str):
-    envs = dotenv_values()
-    envs[env] = envs[env] + "," + to_append
+    if exists(".env"):
+        envs = dotenv_values()
+        envs[env] = envs[env] + "," + to_append
+    else:
+        envs = dict()
+        envs[env] = to_append
+
     with open(".env", "a") as file:
         file.truncate(0)
         for key in envs:
@@ -410,7 +593,7 @@ def append_dotenv(env: str, to_append: str):
 
 def main():
     # Load accounts from .env file
-    load_accounts_from_dotenv()
+    accounts = load_accounts_from_dotenv()
 
     # Create theme
     sg.LOOK_AND_FEEL_TABLE["ElectionsCanadaTheme"] = {
@@ -436,11 +619,9 @@ def main():
         [
             sg.T("Logged in as:"),
             sg.Combo(
-                accounts._accounts,
+                accounts,
                 key="account_list",
-                default_value=accounts._accounts[0]
-                if len(accounts._accounts) > 0
-                else None,
+                default_value=accounts[0] if len(accounts) > 0 else None,
                 enable_events=True,
                 expand_x=True,
             ),
@@ -482,14 +663,13 @@ def main():
         [
             sg.Table(
                 [],
-                headings=["Candidate", "Votes", "Address"],
+                headings=["Rank", "Candidate", "Votes", "Address"],
                 key="ballot",
                 expand_y=True,
                 expand_x=True,
                 # row_colors=("#ffffff", "#e3e5e8"),
                 # alternating_row_color=False,
                 justification="c",
-                display_row_numbers=True,
             )
         ],
         [sg.HorizontalSeparator()],
@@ -548,24 +728,17 @@ def main():
         finalize=True,
     )
 
-    # If set to True, new manager + aggregator contracts will be deployed.
-    # However, these contracts won't be saved to the brownie config.
-    DEPLOY_NEW_CONTRACTS = False
-
-    if network.show_active() == "development" or DEPLOY_NEW_CONTRACTS:
-        MANAGER_CONTRACT = ElectionManager.deploy({"from": accounts[0]})
-        AGGREGATOR_CONTRACT = ElectionDataAggregator.deploy({"from": accounts[0]})
-    else:
-        MANAGER_CONTRACT = Contract.from_abi(
-            "Election Manager",
-            config["networks"][network.show_active()]["manager_contract"],
-            ElectionManager.abi,
-        )
-        AGGREGATOR_CONTRACT = Contract.from_abi(
-            "Election Data Aggregator",
-            config["networks"][network.show_active()]["aggregator_contract"],
-            ElectionDataAggregator.abi,
-        )
+    # Load ABIs
+    with open("abi/ElectionManager.json", "r") as f:
+        election_manager_abi = json.load(f)
+    with open("abi/ElectionDataAggregator.json", "r") as f:
+        election_data_aggregator_abi = json.load(f)
+    MANAGER_CONTRACT = w3.eth.contract(
+        address=MANAGER_CONTRACT_ADDRESS, abi=election_manager_abi
+    )
+    AGGREGATOR_CONTRACT = w3.eth.contract(
+        address=AGGREGATOR_CONTRACT_ADDRESS, abi=election_data_aggregator_abi
+    )
 
     refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
 
@@ -582,7 +755,7 @@ def main():
 
         if event == "add_account":
             previously_selected_account = values["account_list"]
-            new_account = add_account_window()
+            new_account = add_account_window(accounts)
             if new_account is None:
                 # If no account was added
                 refresh_account_list(
@@ -615,18 +788,14 @@ def main():
                     "Submitting transaction...", visible=True, text_color="#52accc"
                 )
                 window.refresh()
-                vote_thread = Thread(
-                    target=vote,
-                    args=(
-                        get_selected_election(values),
-                        values["candidate_list"].address,
-                        values["account_list"],
-                        window,
-                        values,
-                        AGGREGATOR_CONTRACT,
-                    ),
+                vote(
+                    get_selected_election(values),
+                    values["candidate_list"].address,
+                    values["account_list"],
+                    window,
+                    values,
+                    AGGREGATOR_CONTRACT,
                 )
-                vote_thread.start()
 
         if event == "run_for_office":
             if len(values["election_list"]) == 0:
@@ -679,3 +848,19 @@ def main():
                 )
 
     window.close()
+
+
+# Config
+WEBSOCKET_PROVIDER = (
+    "wss://polygon-mumbai.g.alchemy.com/v2/hT5d1dLJf_uJeGuhyFBkTRBgFL_SFeFQ"
+)
+MANAGER_CONTRACT_ADDRESS = "0x57C9133E216eeEc45F551BC93887987E4af09074"
+AGGREGATOR_CONTRACT_ADDRESS = "0xf9b645295Bb4Fe0e038747641329360FBB8Cd9C4"
+
+# Setup Web3
+load_dotenv()
+w3 = Web3(Web3.WebsocketProvider(WEBSOCKET_PROVIDER))
+chain_id = w3.eth.chain_id
+
+# Start GUI
+main()

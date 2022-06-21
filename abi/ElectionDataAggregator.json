@@ -1,0 +1,189 @@
+[
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_electionManager",
+                "type": "address"
+            }
+        ],
+        "name": "getAllElectionsData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "string",
+                        "name": "electionName",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "address[]",
+                        "name": "voters",
+                        "type": "address[]"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "votes",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "name",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "candidateAddress",
+                                "type": "address"
+                            }
+                        ],
+                        "internalType": "struct Candidate[]",
+                        "name": "candidates",
+                        "type": "tuple[]"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "candidateFee",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "electionEndTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "electionStartTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "closed",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct ElectionData[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_election",
+                "type": "address"
+            }
+        ],
+        "name": "getElectionData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "string",
+                        "name": "electionName",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "address[]",
+                        "name": "voters",
+                        "type": "address[]"
+                    },
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "votes",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "string",
+                                "name": "name",
+                                "type": "string"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "candidateAddress",
+                                "type": "address"
+                            }
+                        ],
+                        "internalType": "struct Candidate[]",
+                        "name": "candidates",
+                        "type": "tuple[]"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "owner",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "candidateFee",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "electionEndTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "electionStartTime",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "closed",
+                        "type": "bool"
+                    }
+                ],
+                "internalType": "struct ElectionData",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "_electionManager",
+                "type": "address"
+            }
+        ],
+        "name": "getElectionsBundledWithNames",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "contract Election",
+                        "name": "election",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "name",
+                        "type": "string"
+                    }
+                ],
+                "internalType": "struct BundledElection[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
