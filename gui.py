@@ -1,5 +1,4 @@
 import os
-from textwrap import wrap
 import PySimpleGUI as sg
 import json
 from datetime import datetime as dt
@@ -107,7 +106,7 @@ def get_election_data(
 
 
 def create_election(manager_contract, election_name, election_end_time, from_account):
-    if election_name == None or election_name == "":
+    if election_name is None or election_name == "":
         raise ValueError("Election name cannot be empty")
 
     tx_reciept = w3.eth.wait_for_transaction_receipt(
@@ -316,7 +315,8 @@ def run_for_office_window(wrapped_election: WrappedElection, from_account):
     window.close()
 
 
-# Opens new window for adding account to the brownie accounts list. Returns new account if it was added, None if it was not.
+# Opens new window for adding account to the brownie accounts list.
+# Returns new account if it was added, None if it was not.
 def add_account_window(accounts):
     layout = (
         [
@@ -423,23 +423,6 @@ def admin_console_window(wrapped_election: WrappedElection, from_account):
     window.close()
 
 
-# Convert MM/DD/YYYY H:M:S date to local Unix timestamp
-def unix_time(MMDDYYYY):
-    return int(dt.timestamp(dt.strptime(MMDDYYYY, "%m/%d/%Y %H:%M:%S")))
-
-
-# Convert unix timestamp to MM/DD/YYYY H:M date
-def formatted_time(unix_time: int) -> str:
-    return dt.fromtimestamp(unix_time).strftime("%m/%d/%Y, %H:%M")
-
-
-def refresh_election_list(window: sg.Window, manager_contract, aggregator_contract):
-    window["election_list"].update(
-        values=get_elections(manager_contract, aggregator_contract)
-    )
-    window.refresh()
-
-
 def refresh_account_list(window: sg.Window, accounts, previously_selected_account=None):
     # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
     if not previously_selected_account:
@@ -496,7 +479,7 @@ def vote(
 
 def refresh_ballot(
     window: sg.Window,
-    active_account: str,
+    active_account: Account,
     wrapped_election: WrappedElection,
     aggregator_contract,
 ):
@@ -527,7 +510,7 @@ def refresh_ballot(
         window["admin_console"].update(visible=False)
         window["refresh_ballot"].update(visible=True)
 
-    # Reset any potenitally greyed out buttons (base case)
+    # Reset any potentially greyed out buttons (base case)
     window["run_for_office"].update(disabled=False)
     window["candidate_list"].update(disabled=False)
     window["vote_button"].update(disabled=False)
@@ -765,12 +748,18 @@ def main():
                 )
             else:
                 refresh_account_list(window, accounts)
+                refresh_ballot(
+                    window,
+                    values["account_list"],
+                    get_selected_election(values),
+                    AGGREGATOR_CONTRACT,
+                )
 
         if event == "refresh_elections":
             refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
 
         # If user selects a different election from the election list
-        if event == "election_list" and values["election_list"] != []:
+        if event == "election_list" and get_selected_election(values) is not None:
             refresh_ballot(
                 window,
                 values["account_list"],
@@ -798,14 +787,14 @@ def main():
                 )
 
         if event == "run_for_office":
-            if len(values["election_list"]) == 0:
+            if get_selected_election(values) is None:
                 sg.popup(
                     "Please select an election.",
                     icon="images/icon.ico",
                 )
             else:
                 run_for_office_window(
-                    values["election_list"][0], values["account_list"]
+                    get_selected_election(values), values["account_list"]
                 )
                 refresh_ballot(
                     window,
@@ -815,7 +804,7 @@ def main():
                 )
 
         if event == "refresh_ballot":
-            if len(values["election_list"]) == 0:
+            if get_selected_election(values) is None:
                 sg.popup(
                     "Please select an election.",
                     icon="images/icon.ico",
@@ -829,15 +818,16 @@ def main():
                 )
 
         if event == "account_list":
-            refresh_ballot(
-                window,
-                values["account_list"],
-                get_selected_election(values),
-                AGGREGATOR_CONTRACT,
-            )
+            if get_selected_election(values) is not None:
+                refresh_ballot(
+                    window,
+                    values["account_list"],
+                    get_selected_election(values),
+                    AGGREGATOR_CONTRACT,
+                )
 
         if event == "admin_console":
-            if len(values["election_list"]) == 0:
+            if get_selected_election(values) is None:
                 sg.popup(
                     "Please select an election.",
                     icon="images/icon.ico",
@@ -854,8 +844,8 @@ def main():
 WEBSOCKET_PROVIDER = (
     "wss://polygon-mumbai.g.alchemy.com/v2/hT5d1dLJf_uJeGuhyFBkTRBgFL_SFeFQ"
 )
-MANAGER_CONTRACT_ADDRESS = "0x57C9133E216eeEc45F551BC93887987E4af09074"
-AGGREGATOR_CONTRACT_ADDRESS = "0xf9b645295Bb4Fe0e038747641329360FBB8Cd9C4"
+MANAGER_CONTRACT_ADDRESS = "0x4CBa95fc5c998Ab8030C3e7310BcE96978FC5e25"
+AGGREGATOR_CONTRACT_ADDRESS = "0xE00a5825fF96b552f669990455B33d55770d08c3"
 
 # Setup Web3
 load_dotenv()
