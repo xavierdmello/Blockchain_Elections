@@ -73,6 +73,7 @@ class Account:
     def __str__(self):
         return self.address
 
+    # "name" parameter is optional and will be the address by default
     def __init__(self, private_key):
         self.private_key = private_key
         self.address = w3.eth.account.from_key(private_key).address
@@ -185,6 +186,7 @@ def get_parsed_private_keys():
 
 
 # Opens new window for creating election
+# Returns True if election was created
 def create_election_window(manager_contract, from_account):
     layout = (
         [
@@ -230,7 +232,8 @@ def create_election_window(manager_contract, from_account):
                     unix_time(values["in_date"]),
                     from_account,
                 )
-                break
+                window.close()
+                return True
             except ValueError as e:
                 window["create_election_status"].update(
                     parse_error(str(e)),
@@ -368,11 +371,16 @@ def formatted_time(unix_time: int) -> str:
     return dt.fromtimestamp(unix_time).strftime("%m/%d/%Y, %H:%M")
 
 
+# Returns election list
+# Will deselect previously selected election
 def refresh_election_list(window: sg.Window, manager_contract, aggregator_contract):
+    wrapped_elections = get_elections(manager_contract, aggregator_contract)
     window["election_list"].update(
-        values=get_elections(manager_contract, aggregator_contract)
+        values=wrapped_elections,
     )
     window.refresh()
+
+    return wrapped_elections
 
 
 def get_selected_election(window_values) -> WrappedElection:
@@ -650,8 +658,7 @@ def main():
                 key="ballot",
                 expand_y=True,
                 expand_x=True,
-                # row_colors=("#ffffff", "#e3e5e8"),
-                # alternating_row_color=False,
+                alternating_row_color="#e3e5e8", # Light Gray
                 justification="c",
             )
         ],
@@ -723,18 +730,48 @@ def main():
         address=AGGREGATOR_CONTRACT_ADDRESS, abi=election_data_aggregator_abi
     )
 
-    refresh_election_list(window, manager_contract, aggregator_contract)
+    # Populate the election list and select the first election by default
+    wrapped_elections = refresh_election_list(window, manager_contract, aggregator_contract)
+    window["election_list"].update(set_to_index=0)
+    refresh_ballot(
+        window,
+        accounts[0],
+        wrapped_elections[0],
+        aggregator_contract,
+    )
 
     # Create an event loop
+    first_loop = True
     while True:
         event, values = window.read()
         # End program if user closes window
         if event == sg.WIN_CLOSED:
             break
 
+        # Runs on first loop only
+        if first_loop:
+            first_loop = False
         if event == "create_election":
-            create_election_window(manager_contract, values["account_list"])
-            refresh_election_list(window, manager_contract, aggregator_contract)
+            # Store currently selected election
+            previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
+
+            success = create_election_window(manager_contract, values["account_list"])
+
+            # Will clear currently selected election
+            wrapped_elections = refresh_election_list(window, manager_contract, aggregator_contract)
+
+            if success:
+                # If new election was created, select it & refresh ballot
+                window["election_list"].update(set_to_index=len(wrapped_elections)-1)
+                refresh_ballot(
+                    window,
+                    values["account_list"],
+                    wrapped_elections[-1],
+                    aggregator_contract,
+                )
+            else:
+                # If election was not created, reselect the previously selected election
+                window["election_list"].update(set_to_index=previously_selected_election_index)
 
         if event == "add_account":
             previously_selected_account = values["account_list"]
@@ -756,7 +793,14 @@ def main():
                 )
 
         if event == "refresh_elections":
+            # Store currently selected election
+            previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
+
+            # Will clear currently selected election
             refresh_election_list(window, manager_contract, aggregator_contract)
+
+            # Set selected election back to the previously selected election
+            window["election_list"].update(set_to_index=previously_selected_election_index)
 
         # If user selects a different election from the election list
         if event == "election_list" and get_selected_election(values) is not None:
