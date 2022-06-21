@@ -5,14 +5,6 @@ from brownie import accounts, network, ElectionManager, ElectionDataAggregator
 from datetime import datetime as dt
 from dotenv import dotenv_values
 
-# TODO: Highlights for election winners and gold/silver/bronze medals for candidates.
-
-# BUG: Displays won't get refreshed properly and program will crash if more than one instance is open at a time. Update: this seems to happen randomly. I don't know why. I think that it's PYSimpleGUI's fault.
-# UPDATE #2: I think this is related to window.refresh() & forgetting to call it after making an update to the UI. Also seems to happen by calling it too often.
-
-# BUG: after election list refresh, elections will get deslected
-
-
 # Opens new window for creating election
 def create_election_window(manager_contract, from_account):
     layout = (
@@ -174,7 +166,6 @@ def add_account_window():
                     append_dotenv("PRIVATE_KEY", values["private_key"])
 
                     window.close()
-                    # TODO: Refresh button visiblity when new account added (currently only triggered by button switch)
                     return accounts.add(values["private_key"])
             except ValueError as e:
                 window["account_error"].update(parse_error(str(e)), visible=True)
@@ -268,7 +259,6 @@ def refresh_election_list(
     window.refresh()
 
 
-# TODO: Note: this function may not be actually needed
 def refresh_account_list(window: sg.Window, accounts, previously_selected_account=None):
     # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
     if not previously_selected_account:
@@ -443,7 +433,6 @@ def main():
     voting_col = [
         [sg.Column([[sg.Image(source="images/logo.png")]], justification="c")],
         [sg.HorizontalSeparator()],
-        # TODO: Intergrate admin console
         [
             sg.T("Logged in as:"),
             sg.Combo(
@@ -479,7 +468,7 @@ def main():
             ),
             sg.Push(),
             sg.T(
-                size=(7, 1),
+                size=(6, 1),
                 key="vote_spacer",
             ),  # Dummy spacer element to keep election title somewhat centered.
             sg.Button(
@@ -603,7 +592,6 @@ def main():
                 )
             else:
                 refresh_account_list(window, accounts)
-            # TODO: Show sentinel when account is added.
 
         if event == "refresh_elections":
             refresh_election_list(window, MANAGER_CONTRACT, AGGREGATOR_CONTRACT)
@@ -670,7 +658,7 @@ def main():
                     get_selected_election(values),
                     AGGREGATOR_CONTRACT,
                 )
-        # TODO: Modifiy so this condition changes less often
+
         if event == "account_list":
             refresh_ballot(
                 window,
