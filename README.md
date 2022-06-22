@@ -1,18 +1,25 @@
-# Requirements
-- [Python](https://www.python.org/downloads/) version greater than `3.7` and less than `3.9.x`. Tested with python `3.9.12`.
-- [PySimpleGUI](https://pysimplegui.readthedocs.io/en/latest/): `python -m pip install pysimplegui`
-- [Python-dotenv](https://github.com/theskumar/python-dotenv): `pip install python-dotenv`
-- [Brownie](https://github.com/eth-brownie/brownie): `pip install eth-brownie`
-- Brownie depends on [ganache](https://github.com/trufflesuite/ganache), install it with [Node.js](https://nodejs.org/en/): `npm install ganache --global`
+# Blockchain Elections
+A proof-of-concept online voting system designed to promote transparency, security, and deter fraud. Created with [Python](https://www.python.org/), [Solidity](https://github.com/ethereum/solidity), [Brownie](https://github.com/eth-brownie/brownie), [Web3.py](https://github.com/ethereum/web3.py), and [PySimpleGUI](https://github.com/PySimpleGUI/PySimpleGUI).
 
-# Setup
-Create a .env file in the root folder with your `PRIVATE_KEY` and `WEB3_INFURA_PROJECT_ID` (if you are connecting to a test network). Your .env file should look similar to this:
-  ```
-  PRIVATE_KEY=your private key
-  WEB3_INFURA_PROJECT_ID=your rpc url
-  ```
-    
-# Usage
-Run `scripts/gui.py`.
+![ElectionsCanada](https://user-images.githubusercontent.com/18093763/174925401-a60b3544-fb70-4803-a520-9a03bd38e107.png)
 
-Standalone packaged `.exe` will be coming soon.
+# Installation
+**Windows Users:**
+1. Download `ElectionsCanada_Windows.zip` from the [latest release](https://github.com/2021-2022-McCafferyICS/gr-12-ics-portfolio-xavierdmello/releases/latest)
+2. Run `ElectionsCanada.exe`
+
+**MacOS/Linux Users:**
+1. Download `Source code (zip)` from the [latest release](https://github.com/2021-2022-McCafferyICS/gr-12-ics-portfolio-xavierdmello/releases/latest)
+2. Make sure you have [Web3.py](https://pypi.org/project/web3/) and [Python-dotenv](https://pypi.org/project/python-dotenv/) installed
+3. Run `ElectionsCanada.py`
+
+# Getting Started 
+1. Install a crypto wallet. [Metamask](https://metamask.io/) is recommended. If you already have a wallet, you can skip this step.
+2. Enter your wallet address in https://mumbaifaucet.com/ to get free MATIC (test funds) to pay for transaction fees.
+3. Click "Add Account" in the Elections Canada app and paste your account's private key.
+    - Your private key is not stored securely in the Elections app - while testing it out, please use a seperate account that has no real funds attached to it.
+    - In Metamask, you can get your private key by following these steps:
+      1. Click the three dots in the top right of Metamask
+      2. Click on "Account Details"
+      3. Click on "Export Private Key"
+4. You're good to go! Create elections, run for office, and vote - with the next generation of secure, decentralized technology.
