@@ -5,11 +5,11 @@ A proof-of-concept online voting system designed to promote transparency, securi
 
 # Installation
 **Windows Users:**
-1. Download `ElectionsCanada_Windows.zip` from the [latest release](https://github.com/2021-2022-McCafferyICS/gr-12-ics-portfolio-xavierdmello/releases/latest)
+1. Download `ElectionsCanada_Windows.zip` from the [latest release](https://github.com/xavierdmello/Blockchain_Elections/releases/latest)
 2. Run `ElectionsCanada.exe`
 
 **MacOS/Linux Users:**
-1. Download `Source code (zip)` from the [latest release](https://github.com/2021-2022-McCafferyICS/gr-12-ics-portfolio-xavierdmello/releases/latest)
+1. Download `Source code (zip)` from the [latest release](https://github.com/xavierdmello/Blockchain_Elections/releases/latest)
 2. Make sure you have [Python](https://www.python.org/), [Web3.py](https://pypi.org/project/web3/), and [Python-dotenv](https://pypi.org/project/python-dotenv/) installed
 3. Run `ElectionsCanada.py`
 
