@@ -505,7 +505,7 @@ def refresh_ballot(
     window["election_title"].update(value=election_data.election_name)
 
     # Enable election admin console if user is the election admin
-    if active_account.address == election_data.owner:
+    if active_account is not None and active_account != "" and active_account.address == election_data.owner:
         window["admin_console"].update(visible=True)
         # Hide vote spacer because the now visible admin console button will take up the space in its place.
         # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dynamic layouts.
@@ -529,12 +529,18 @@ def refresh_ballot(
     )
     # Grey out button if user is already running for the election
     if (
-        active_account.address in election_data.candidate_addresses
-        or active_account == ""
+        active_account == "" or active_account is None or active_account.address in election_data.candidate_addresses
     ):
         window["run_for_office"].update(disabled=True)
     # Grey out buttons if user has already voted
-    if active_account.address in election_data.voters or active_account == "":
+    if active_account is None or active_account == "":
+        window["candidate_list"].update(disabled=True)
+        window["vote_button"].update(disabled=True)
+        window["vote_blurb"].update(
+            f"Please add an account to vote.",
+            text_color="#000000",
+        )
+    elif active_account.address in election_data.voters:
         window["candidate_list"].update(disabled=True)
         window["vote_button"].update(disabled=True)
         window["vote_blurb"].update(
@@ -735,7 +741,7 @@ def main():
     window["election_list"].update(set_to_index=0)
     refresh_ballot(
         window,
-        accounts[0],
+        accounts[0] if len(accounts) != 0 else None,
         wrapped_elections[0],
         aggregator_contract,
     )
@@ -787,7 +793,7 @@ def main():
                 refresh_account_list(window, accounts)
                 refresh_ballot(
                     window,
-                    values["account_list"],
+                    new_account,
                     get_selected_election(values),
                     aggregator_contract,
                 )
