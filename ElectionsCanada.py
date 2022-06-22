@@ -348,10 +348,10 @@ def add_account_window(accounts):
                         "Error: Account already added", visible=True
                     )
                 else:
+                    accounts.append(Account(values["private_key"]))
+
                     # append private key to PRIVATE_KEY variable in .env file
                     append_dotenv("PRIVATE_KEY", values["private_key"])
-
-                    accounts.append(Account(values["private_key"]))
 
                     window.close()
                     return Account(values["private_key"])
