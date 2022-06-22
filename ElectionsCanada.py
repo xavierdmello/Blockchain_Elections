@@ -432,14 +432,15 @@ def admin_console_window(wrapped_election: WrappedElection, from_account):
 
 
 def refresh_account_list(window: sg.Window, accounts, previously_selected_account=None):
-    # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
-    if not previously_selected_account:
-        window["account_list"].update(values=accounts, value=accounts[-1])
-    else:
-        window["account_list"].update(
-            values=accounts, value=previously_selected_account
-        )
-    window.refresh()
+    if len(accounts) != 0:
+        if not previously_selected_account:
+            window["account_list"].update(values=accounts, value=accounts[-1])
+        else:
+            # `value=previously_selected_account` makes sure that the selected account in the box is the one the user just added
+            window["account_list"].update(
+                values=accounts, value=previously_selected_account
+            )
+        window.refresh()
 
 
 def vote(
@@ -621,6 +622,7 @@ def main():
                 default_value=accounts[0] if len(accounts) > 0 else None,
                 enable_events=True,
                 expand_x=True,
+                readonly=True
             ),
             sg.Button("Add Account", key="add_account"),
         ],
@@ -678,6 +680,7 @@ def main():
                 enable_events=True,
                 size=(15, 1),
                 disabled=True,
+                readonly=True
             ),
             sg.Button("Vote", key="vote_button", disabled=True),
             sg.Text(
