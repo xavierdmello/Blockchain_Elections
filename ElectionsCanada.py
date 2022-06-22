@@ -492,87 +492,91 @@ def refresh_ballot(
     wrapped_election: WrappedElection,
     aggregator_contract,
 ):
-    election_data = get_election_data(wrapped_election, aggregator_contract)
+    # wrapped_elections may be None if no election is currently selected in the UI.
+    # Lots of effort has been taken to minimize this from happening, but there still are some edge cases.
+    # This check is an easy way to handle them: if no elections are currently selected, the ballot doesn't get updated.
+    if wrapped_election is not None:
+        election_data = get_election_data(wrapped_election, aggregator_contract)
 
-    # Update candidate list
-    window["candidate_list"].update(
-        values=election_data.wrapped_candidates,
-        value=election_data.wrapped_candidates[0]
-        if len(election_data.wrapped_candidates) > 0
-        else None,
-    )
+        # Update candidate list
+        window["candidate_list"].update(
+            values=election_data.wrapped_candidates,
+            value=election_data.wrapped_candidates[0]
+            if len(election_data.wrapped_candidates) > 0
+            else None,
+        )
 
-    # Update title
-    window["election_title"].update(value=election_data.election_name)
+        # Update title
+        window["election_title"].update(value=election_data.election_name)
 
-    # Enable election admin console if user is the election admin
-    if active_account is not None and active_account != "" and active_account.address == election_data.owner:
-        window["admin_console"].update(visible=True)
-        # Hide vote spacer because the now visible admin console button will take up the space in its place.
-        # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dynamic layouts.
-        window["vote_spacer"].update(visible=False)
-    else:
-        # Hide, then show refresh ballot button to make sure elements show up in the right order
-        window["refresh_ballot"].update(visible=False)
+        # Enable election admin console if user is the election admin
+        if active_account is not None and active_account != "" and active_account.address == election_data.owner:
+            window["admin_console"].update(visible=True)
+            # Hide vote spacer because the now visible admin console button will take up the space in its place.
+            # Will be ever so slightly off center, due to the limitations of PySimpleGui not being made for dynamic layouts.
+            window["vote_spacer"].update(visible=False)
+        else:
+            # Hide, then show refresh ballot button to make sure elements show up in the right order
+            window["refresh_ballot"].update(visible=False)
 
-        window["vote_spacer"].update(visible=True)
-        window["admin_console"].update(visible=False)
-        window["refresh_ballot"].update(visible=True)
+            window["vote_spacer"].update(visible=True)
+            window["admin_console"].update(visible=False)
+            window["refresh_ballot"].update(visible=True)
 
-    # Reset any potentially greyed out buttons (base case)
-    window["run_for_office"].update(disabled=False)
-    window["candidate_list"].update(disabled=False)
-    window["vote_button"].update(disabled=False)
-    window["vote_blurb"].update(
-        "End: " + formatted_time(election_data.election_end_time),
-        text_color="#000000",
-        visible=True,
-    )
-    # Grey out button if user is already running for the election
-    if (
-        active_account == "" or active_account is None or active_account.address in election_data.candidate_addresses
-    ):
-        window["run_for_office"].update(disabled=True)
-    # Grey out buttons if user has already voted
-    if active_account is None or active_account == "":
-        window["candidate_list"].update(disabled=True)
-        window["vote_button"].update(disabled=True)
+        # Reset any potentially greyed out buttons (base case)
+        window["run_for_office"].update(disabled=False)
+        window["candidate_list"].update(disabled=False)
+        window["vote_button"].update(disabled=False)
         window["vote_blurb"].update(
-            f"Please add an account to vote.",
+            "End: " + formatted_time(election_data.election_end_time),
             text_color="#000000",
+            visible=True,
         )
-    elif active_account.address in election_data.voters:
-        window["candidate_list"].update(disabled=True)
-        window["vote_button"].update(disabled=True)
-        window["vote_blurb"].update(
-            f"You have already voted.",
-            text_color="#000000",
-        )
-    # Grey out buttons if election is ended
-    if election_data.closed:
-        window["run_for_office"].update(disabled=True)
-        window["candidate_list"].update(disabled=True)
-        window["vote_button"].update(disabled=True)
-        window["vote_blurb"].update(
-            f"Election ended on {formatted_time(election_data.election_end_time)}",
-            text_color="#000000",
-        )
+        # Grey out button if user is already running for the election
+        if (
+            active_account == "" or active_account is None or active_account.address in election_data.candidate_addresses
+        ):
+            window["run_for_office"].update(disabled=True)
+        # Grey out buttons if user has already voted
+        if active_account is None or active_account == "":
+            window["candidate_list"].update(disabled=True)
+            window["vote_button"].update(disabled=True)
+            window["vote_blurb"].update(
+                f"Please add an account to vote.",
+                text_color="#000000",
+            )
+        elif active_account.address in election_data.voters:
+            window["candidate_list"].update(disabled=True)
+            window["vote_button"].update(disabled=True)
+            window["vote_blurb"].update(
+                f"You have already voted.",
+                text_color="#000000",
+            )
+        # Grey out buttons if election is ended
+        if election_data.closed:
+            window["run_for_office"].update(disabled=True)
+            window["candidate_list"].update(disabled=True)
+            window["vote_button"].update(disabled=True)
+            window["vote_blurb"].update(
+                f"Election ended on {formatted_time(election_data.election_end_time)}",
+                text_color="#000000",
+            )
 
-    # Update ballot
-    unwrapped_candidates = []
-    for i, wrapped_candidate in enumerate(election_data.wrapped_candidates):
-        unwrapped_candidates.append(
-            [
-                election_data.ranks[i],
-                wrapped_candidate.name,
-                wrapped_candidate.votes,
-                wrapped_candidate.address,
-            ]
-        )
-    window["ballot"].update(unwrapped_candidates)
+        # Update ballot
+        unwrapped_candidates = []
+        for i, wrapped_candidate in enumerate(election_data.wrapped_candidates):
+            unwrapped_candidates.append(
+                [
+                    election_data.ranks[i],
+                    wrapped_candidate.name,
+                    wrapped_candidate.votes,
+                    wrapped_candidate.address,
+                ]
+            )
+        window["ballot"].update(unwrapped_candidates)
 
-    # Refresh window
-    window.refresh()
+        # Refresh window
+        window.refresh()
 
 
 def append_dotenv(env: str, to_append: str):
@@ -741,13 +745,14 @@ def main():
 
     # Populate the election list and select the first election by default
     wrapped_elections = refresh_election_list(window, manager_contract, aggregator_contract)
-    window["election_list"].update(set_to_index=0)
-    refresh_ballot(
-        window,
-        accounts[0] if len(accounts) != 0 else None,
-        wrapped_elections[0],
-        aggregator_contract,
-    )
+    if len(wrapped_elections) != 0:
+        window["election_list"].update(set_to_index=0)
+        refresh_ballot(
+            window,
+            accounts[0] if len(accounts) != 0 else None,
+            wrapped_elections[0],
+            aggregator_contract,
+        )
 
     # Create an event loop
     first_loop = True
@@ -757,30 +762,34 @@ def main():
         if event == sg.WIN_CLOSED:
             break
 
-        # Runs on first loop only
-        if first_loop:
-            first_loop = False
         if event == "create_election":
-            # Store currently selected election
-            previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
-
-            success = create_election_window(manager_contract, values["account_list"])
-
-            # Will clear currently selected election
-            wrapped_elections = refresh_election_list(window, manager_contract, aggregator_contract)
-
-            if success:
-                # If new election was created, select it & refresh ballot
-                window["election_list"].update(set_to_index=len(wrapped_elections)-1)
-                refresh_ballot(
-                    window,
-                    values["account_list"],
-                    wrapped_elections[-1],
-                    aggregator_contract,
+            if values["account_list"] == "" or values["account_list"] is None:
+                sg.popup(
+                    "Please add an account first.", icon="images/icon.ico"
                 )
             else:
-                # If election was not created, reselect the previously selected election
-                window["election_list"].update(set_to_index=previously_selected_election_index)
+                no_previous_elections = len(window["election_list"].get_list_values()) == 0
+                if not no_previous_elections:
+                    # Store currently selected election
+                    previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
+
+                success = create_election_window(manager_contract, values["account_list"])
+
+                # Will clear currently selected election
+                wrapped_elections = refresh_election_list(window, manager_contract, aggregator_contract)
+
+                if success:
+                    # If new election was created, select it & refresh ballot
+                    window["election_list"].update(set_to_index=len(wrapped_elections)-1)
+                    refresh_ballot(
+                        window,
+                        values["account_list"],
+                        wrapped_elections[-1],
+                        aggregator_contract,
+                    )
+                elif not no_previous_elections:
+                    # If election was not created, reselect the previously selected election
+                    window["election_list"].update(set_to_index=previously_selected_election_index)
 
         if event == "add_account":
             previously_selected_account = values["account_list"]
@@ -802,14 +811,17 @@ def main():
                 )
 
         if event == "refresh_elections":
-            # Store currently selected election
-            previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
+            no_previous_elections = len(window["election_list"].get_list_values()) == 0
+            if not no_previous_elections:
+                # Store currently selected election
+                previously_selected_election_index = window.Element('election_list').Widget.curselection()[0]
 
             # Will clear currently selected election
             refresh_election_list(window, manager_contract, aggregator_contract)
 
-            # Set selected election back to the previously selected election
-            window["election_list"].update(set_to_index=previously_selected_election_index)
+            if not no_previous_elections:
+                # Set selected election back to the previously selected election
+                window["election_list"].update(set_to_index=previously_selected_election_index)
 
         # If user selects a different election from the election list
         if event == "election_list" and get_selected_election(values) is not None:
@@ -894,16 +906,16 @@ def main():
 
 
 # Config
-# Polygon Testnet Mumbai
-WEBSOCKET_PROVIDER = (
-    "wss://polygon-mumbai.g.alchemy.com/v2/hT5d1dLJf_uJeGuhyFBkTRBgFL_SFeFQ"
+# Optimism Kovan Testnet
+RPC_PROVIDER = (
+    "https://opt-kovan.g.alchemy.com/v2/G5Brag4ymz9H_rHh71wXFD08wqbHFuNk"
 )
-MANAGER_CONTRACT_ADDRESS = "0x4CBa95fc5c998Ab8030C3e7310BcE96978FC5e25"
-AGGREGATOR_CONTRACT_ADDRESS = "0xE00a5825fF96b552f669990455B33d55770d08c3"
+MANAGER_CONTRACT_ADDRESS = "0xE33f0B7584684EF1AaA187BBB310c1032620F358"
+AGGREGATOR_CONTRACT_ADDRESS = "0x01ccB5B5022ed51A095f060a6559CF105D36247B"
 
 # Setup Web3
 load_dotenv()
-w3 = Web3(Web3.WebsocketProvider(WEBSOCKET_PROVIDER))
+w3 = Web3(Web3.HTTPProvider(RPC_PROVIDER))
 chain_id = w3.eth.chain_id
 
 # Start GUI
