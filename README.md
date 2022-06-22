@@ -15,7 +15,7 @@ A proof-of-concept online voting system designed to promote transparency, securi
 
 # Getting Started 
 1. Install a crypto wallet. [Metamask](https://metamask.io/) is recommended. If you already have a wallet, you can skip this step.
-2. Enter your wallet address in https://mumbaifaucet.com/ to get free MATIC (test funds) to pay for transaction fees.
+2. Enter your wallet address in https://optimismfaucet.xyz/ to get free ETH (test funds) to pay for transaction fees.
 3. Click "Add Account" in the Elections Canada app and paste your account's private key.
     - Your private key is not stored securely in the Elections app - while testing it out, please use a seperate account that has no real funds attached to it.
     - In Metamask, you can get your private key by following these steps:
