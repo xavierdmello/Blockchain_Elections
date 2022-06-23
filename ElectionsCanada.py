@@ -626,7 +626,8 @@ def main():
                 default_value=accounts[0] if len(accounts) > 0 else None,
                 enable_events=True,
                 expand_x=True,
-                readonly=True
+                readonly=True,
+                size=(45, 1)
             ),
             sg.Button("Add Account", key="add_account"),
         ],
