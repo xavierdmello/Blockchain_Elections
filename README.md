@@ -3,7 +3,7 @@ A proof-of-concept online voting system designed to promote transparency, securi
 
 ![ElectionsCanada](https://user-images.githubusercontent.com/18093763/174925401-a60b3544-fb70-4803-a520-9a03bd38e107.png)
 
-# Installation
+## Installation
 **Windows Users:**
 1. Download `ElectionsCanada_Windows.zip` from the [latest release](https://github.com/xavierdmello/Blockchain_Elections/releases/latest)
 2. Run `ElectionsCanada.exe`
@@ -13,7 +13,7 @@ A proof-of-concept online voting system designed to promote transparency, securi
 2. Make sure you have [Python](https://www.python.org/), [Web3.py](https://pypi.org/project/web3/), and [Python-dotenv](https://pypi.org/project/python-dotenv/) installed
 3. Run `ElectionsCanada.py`
 
-# Getting Started 
+## Getting Started 
 1. Install a crypto wallet. [Metamask](https://metamask.io/) is recommended. If you already have a wallet, you can skip this step.
 2. Enter your wallet address in https://faucet.avax.network/ to get free ETH (test funds) to pay for transaction fees.
 3. Click "Add Account" in the Elections Canada app and paste your account's private key.
@@ -23,3 +23,11 @@ A proof-of-concept online voting system designed to promote transparency, securi
       2. Click on "Account Details"
       3. Click on "Export Private Key"
 4. You're good to go! Create elections, run for office, and vote - with the next generation of secure, decentralized technology.
+
+## Contract Addresses
+
+Deployed on the Avalanche Testnet
+
+`ElectionManager:` [0xC690ce62e557B7e7687DFb58945D49022851621A](https://testnet.snowtrace.io/address/0xC690ce62e557B7e7687DFb58945D49022851621A)
+
+`ElectionDataAggregator:` [0x2A0B10368e69E35a330Fac7DeFcC9dC879e8B021](https://testnet.snowtrace.io/address/0x2A0B10368e69E35a330Fac7DeFcC9dC879e8B021)
