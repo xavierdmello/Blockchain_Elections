@@ -85,7 +85,7 @@ contract Election {
     }
 
     modifier onlyElectionRunning() {
-        assert(isClosed() == false);
+        require(isClosed() == false, "Election is closed.");
         _;
     }
 
